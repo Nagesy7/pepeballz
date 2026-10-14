@@ -35,7 +35,7 @@ let navCD = 0; function nav(dt) {
   if (pressed.up) d = -1; else if (pressed.down) d = 1; else if (Math.abs(y) > 0.6 && navCD <= 0) d = Math.sign(y);
   if (d) navCD = 0.22; if (Math.abs(y) < 0.3 && !held.up && !held.down) navCD = 0; return d;
 }
-function navX() { const [x] = moveVec(); if (pressed.left) return -1; if (pressed.right) return 1; if (Math.abs(x) > 0.7 && navCD <= 0) { navCD = 0.25; return Math.sign(x); } return 0; }
+function navX() { const [x] = moveVec(); if (pressed.left) { navCD = 0.3; return -1; } if (pressed.right) { navCD = 0.3; return 1; } if (held.left || held.right) return 0; if (Math.abs(x) > 0.7 && navCD <= 0) { navCD = 0.25; return Math.sign(x); } return 0; }
 // touch: thumb stick + buttons (DOM overlay)
 const touchUI = document.getElementById('touch');
 function setupTouch() {
@@ -201,7 +201,8 @@ function updateCut(dt) {
 // ---------------- combat ----------------
 function burst(x, y, col, n = 10, sp = 60) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, v = sp * (0.3 + Math.random()); G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4 + Math.random() * 0.4, col, s: 1 + (Math.random() * 2 | 0) }); } }
 const float = (x, y, text, col = '#fff') => G.floats.push({ x, y, text: String(text), col, t: 0.9 });
-function auraColor() { const c = K.COSMETICS[P().cosmetics.aura]; return c?.color || STAGES[Math.max(1, pl.stage)].aura; } // holder cosmetics tint the aura only, never the fur
+function auraColor() { const c = K.COSMETICS[P().cosmetics.aura]; return (c && (!c.forms || c.forms.includes(Math.max(1, pl.stage))) && c.color) || STAGES[Math.max(1, pl.stage)].aura; }
+function boltColor() { const c = K.COSMETICS[P()?.cosmetics?.bolt]; return c?.color || '#7fd0ff'; } // holder cosmetics tint the aura only, never the fur
 function beamColor() { const c = K.COSMETICS[P().cosmetics.beam]; return c?.color === 'rainbow' ? `hsl(${(G.t * 400) % 360},100%,65%)` : c?.color || '#7ff0ff'; }
 function hurtPlayer(raw, fromX, fromY) {
   if (pl.inv > 0 || pl.dash > 0 || G.state !== 'play') return;
@@ -211,6 +212,7 @@ function hurtPlayer(raw, fromX, fromY) {
 }
 function die() {
   P().hp = 0; Audio8.sfx('die'); pl.ascend = false;
+  if (G.mode === 'tourney') return tourneyResult(false);
   if (G.mode !== 'story') { G.run.deaths++; toast('Fainted! +1 death. Back on your paws...'); C.init(P()); pl.inv = 2; if (G.mode === 'rush') { pl.x = 20 * TILE; pl.y = 14 * TILE; } else enterArea('village', 20.5, 9); return; }
   P().deaths++; G.state = 'gameover';
   openMenu({ title: 'You fainted...', noBack: true, items: [{ label: 'Continue from last save', act: () => { G.menu = null; continueGame(); } }, { label: 'Title screen', act: () => { G.menu = null; toTitle(); } }] });
@@ -222,6 +224,7 @@ function hitEnemy(e, dmg, ang, kb, isBoss) {
   if (e.hp <= 0) isBoss ? bossDown() : killEnemy(e);
 }
 function killEnemy(e) {
+  if (e.type === 'ghost') { e.dead = true; burst(e.x, e.y - 12, '#d0c0ff', 30, 100); return tourneyResult(true); }
   burst(e.x, e.y - 6, e.type === 'kitten' ? '#ff8fc8' : e.type === 'boar' ? '#b07a52' : '#bdb8b0', 18); Audio8.sfx('hit3'); e.dead = true;
   if (G.mode !== 'story') return;
   const ups = C.gainXp(P(), e.T.xp); P().bones += e.T.bones; float(e.x, e.y - 24, `+${e.T.xp}xp  +${e.T.bones} bones`, '#9effa0');
@@ -267,7 +270,7 @@ function updatePlayer(dt) {
   for (const ex of G.area.exits) { const tx = pl.x / TILE, ty = pl.y / TILE; if (tx >= ex.x && tx <= ex.x + ex.w && ty >= ex.y && ty <= ex.y + ex.h && !G.fadeTo) { if (G.mode === 'rush') continue; G.fadeTo = ex; } }
 }
 function updateEnemies(dt) {
-  for (const e of G.enemies) { if (e.dead) continue; e.flash -= dt; e.t += dt; e.cd -= dt;
+  for (const e of G.enemies) { if (e.dead) continue; e.flash -= dt; e.t += dt; e.cd -= dt; if (e.type === 'ghost') { updateGhost(e, dt); continue; }
     const dx = pl.x - e.x, dy = pl.y - e.y, dist = Math.hypot(dx, dy), T = e.T;
     if (e.kb > 0) { e.kb -= dt; moveBody(e, e.vx * dt, e.vy * dt, 5, 3); continue; }
     if (e.type === 'boar' && e.st === 'charge') { moveBody(e, e.vx * dt, e.vy * dt, 6, 3); if ((e.t -= 0) && e.cd < 0) { e.st = 'chase'; e.cd = 2; } }
@@ -314,8 +317,8 @@ function updateBoss(dt) {
 }
 function bossDown() {
   const b = G.boss; b.st = 'down'; G.enemies.forEach((e) => (e.dead = true)); G.shots = []; burst(b.x, b.y - 16, '#ff8fc8', 60, 140); G.shake = 0.6; Audio8.sfx('die');
-  if (G.mode === 'rush') { b.lock = false; return finishRun(); }
-  const ups = C.gainXp(P(), 150); P().bones += 60; P().flags.cateDown = true;
+  if (G.mode === 'rush') { b.lock = false; K.contribute(G.root, 'cate_defeats', 'you'); return finishRun(); }
+  const ups = C.gainXp(P(), 150); P().bones += 60; P().flags.cateDown = true; K.contribute(G.root, 'cate_defeats', 'you'); saveNet();
   say([['Cate', 'Mrrp?! You... popped my snack-sized form!'], ['Cate', 'Fine! I\'ll go absorb something BIGGER. You haven\'t seen my other forms, doggy!'], ['Shiba', 'She dropped something glowing...']],
     () => { G.boss = null; Audio8.music('mountain'); G.area.pickups.push({ key: 'orb7', kind: 'orb', n: 7, x: b.x / TILE, y: b.y / TILE }); G.banner = { text: ups ? `Cate defeated!  Lv ${P().level}` : 'Cate defeated!', t: 3 }; saveGame(true); });
 }
@@ -328,12 +331,13 @@ function updatePickups() {
       if (it.kind === 'orb') giveOrb(it.n); else { C.addItem(p, it.id); Audio8.sfx('pickup'); toast(`Found ${C.ITEMS[it.id].name}`); } saveGame(true); } }
   for (const d of G.drops) { d.t -= 1 / 60; if (Math.hypot(d.x - pl.x, d.y - pl.y) < 12 && G.mode === 'story') { d.t = 0; C.addItem(p, d.id); Audio8.sfx('pickup'); toast('Bone Biscuit!'); } }
   G.drops = G.drops.filter((d) => d.t > 0);
-  if (G.mode === 'hunt') for (const o of G.hunt.orbs) if (o.area === G.area.id && !G.hunt.got.includes(o.id) && Math.hypot(o.x * TILE - pl.x, o.y * TILE - pl.y) < 12) { G.hunt.got.push(o.id); Audio8.sfx('orb'); G.banner = { text: `Hunt orb ${G.hunt.got.length}/7`, t: 2 }; }
+  if (G.mode === 'hunt') for (const o of G.hunt.orbs) if (o.area === G.area.id && !G.hunt.got.includes(o.id) && Math.hypot(o.x * TILE - pl.x, o.y * TILE - pl.y) < 12) { G.hunt.got.push(o.id); K.contribute(G.root, 'hunt_orbs', 'you'); Audio8.sfx('orb'); G.banner = { text: `Hunt orb ${G.hunt.got.length}/7`, t: 2 }; }
 }
 
 // ---------------- Pepe the Wish Frog ----------------
 function startWish() {
-  G.state = 'wish'; G.wish = { t: 0, phase: 'rise' }; pl.x = 20 * TILE; pl.y = 9.5 * TILE; pl.dir = 1; pl.ascend = false; Audio8.music('wish'); Audio8.sfx('croak'); G.shake = 0.5;
+  const golden = G.mode === 'story' && G.net.useGolden && K.goldenOrbEligible(G.holdU || 0);
+  G.state = 'wish'; G.wish = { t: 0, phase: 'rise', golden }; if (golden) { const r = K.goldenSummon(G.root, G.holdU || 0); if (r.ok) { P().cosmetics.title = 'title_golden'; saveNet(); } } pl.x = 20 * TILE; pl.y = 9.5 * TILE; pl.dir = 1; pl.ascend = false; Audio8.music('wish'); Audio8.sfx('croak'); G.shake = 0.5;
 }
 function updateWish(dt) {
   const w = G.wish; w.t += dt;
@@ -383,6 +387,7 @@ function networkMenu() {
       { label: 'Weekly Wish Orb Hunt', sub: 'Free. Same 7 orbs for everyone this week. Fastest wins.', act: () => startRun('hunt') },
       { label: 'Cate Boss Rush', sub: 'Free. Fixed build. Fastest clear wins.', act: () => startRun('rush') },
       { label: 'Leaderboards & prize pools', act: leaderboardsMenu }, { label: 'Pepe Wish Shop (cosmetic)', act: wishShop }, { label: 'Cosmetics & holder tier', act: cosmeticsMenu },
+      { label: 'Tournament of Paws (weekly, free)', act: tourneyMenu }, { label: 'Cate Bounty Board', act: bountyMenu }, { label: 'Seasons', act: seasonMenu }, { label: 'Burn for Legends', act: burnMenu }, { label: 'Fighter Launches (stub)', act: launchMenu },
       { label: 'Pack & Kibble Cup', act: packMenu }, { label: 'Co-op Cate Raid (event stub)', act: raidMenu }, { label: 'Export cosmetics to Inu Verse (stub)', act: exportMenu }, { label: 'Back', act: closeMenu } ] });
 }
 function leaderboardsMenu() {
@@ -400,11 +405,12 @@ function wishShop() {
       act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Wish granted: ${c.name} (sim)`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
 }
 function cosmeticsMenu() {
-  const kinds = ['aura', 'beam', 'outfit', 'title'];
+  const kinds = ['aura', 'bolt', 'beam', 'outfit', 'title'];
   const avail = (k) => ['', ...Object.keys(K.COSMETICS).filter((id) => K.COSMETICS[id].kind === k && (G.net.owned.includes(id) || K.unlockedByTier(G.holdU || 0).includes(id)))];
-  const label = (k) => { const v = P().cosmetics[k]; return v && K.COSMETICS[v] ? K.COSMETICS[v].name : k === 'aura' ? 'Gold (default)' : k === 'beam' ? 'Cyan (default)' : k === 'outfit' ? 'Hoodie (default)' : 'none'; };
+  const label = (k) => { const v = P().cosmetics[k]; return v && K.COSMETICS[v] ? K.COSMETICS[v].name : k === 'aura' ? 'Gold (default)' : k === 'beam' ? 'Cyan (default)' : k === 'bolt' ? 'Blue-white (default)' : k === 'outfit' ? 'Hoodie (default)' : 'none'; };
   openMenu({ title: 'Cosmetics', info: () => [`Holder tier: ${tier().name} (holdings ${K.fmtK(G.holdU || 0)} sim KIBBLE)`, 'Tiers: Pup 0, Hound 1k, Alpha 10k, Shogun 100k. Cosmetic only.'],
-    items: () => [...kinds.map((k) => ({ label: `${k[0].toUpperCase() + k.slice(1)}: ${label(k)}  <>`, lr: (d) => { const l = avail(k), i = l.indexOf(P().cosmetics[k] || ''); P().cosmetics[k] = l[(i + d + l.length) % l.length]; G.net.cos = { ...P().cosmetics }; saveNet(); }, act: () => {} })),
+    items: () => [...kinds.map((k) => ({ label: `${k[0].toUpperCase() + k.slice(1)}: ${label(k)}  <>`, lr: (d) => { const l = avail(k), i = Math.max(0, l.indexOf(P().cosmetics[k] || '')); P().cosmetics[k] = l[(i + d + l.length) % l.length]; G.net.cos = { ...P().cosmetics }; saveNet(); }, act: () => {} })),
+      { label: `Pepe's Golden Orb: ${K.goldenOrbEligible(G.holdU || 0) ? (G.net.useGolden ? 'ON' : 'off') : 'locked (Alpha+)'}`, sub: 'Rare cosmetic 8th orb. Summon with it for Golden Pepe + a unique title.', act: () => { if (!K.goldenOrbEligible(G.holdU || 0)) return toast('Alpha tier or higher'); G.net.useGolden = !G.net.useGolden; saveNet(); } },
       { label: 'SIM: raise holdings (tier preview)', act: async () => { const w = K.getWallet(); w.s.holdU = w.s.holdU >= K.toU(100000) ? 0 : w.s.holdU < K.toU(1000) ? K.toU(1000) : w.s.holdU * 10; saveNet(); await refreshWallet(); toast(`Tier: ${tier().name}`); } }, { label: 'Back', act: closeMenu }] });
 }
 function packMenu() {
@@ -421,6 +427,55 @@ function exportMenu() {
   openMenu({ title: 'Inu Verse carry-over (stub)', info: () => ['Cosmetics only. Unsigned stub format:', ...JSON.stringify(data).match(/.{1,46}/g).slice(0, 6)],
     items: [{ label: 'Copy JSON', act: () => { navigator.clipboard?.writeText(JSON.stringify(data)).then(() => toast('Copied'), () => toast('Clipboard unavailable')); } }, { label: 'Back', act: closeMenu }] });
 }
+
+// ---------------- Tournament of Paws (weekly 1v1 vs warrior ghosts) ----------------
+const GHOST_NAMES = [['Mochi', 'cream', { str: 9, def: 4, vit: 5, enr: 4 }], ['Kuro', 'dark', { str: 5, def: 9, vit: 6, enr: 3 }], ['Hana', 'red', { str: 7, def: 5, vit: 7, enr: 5 }], ['Taro', 'tan', { str: 6, def: 6, vit: 6, enr: 6 }], ['Yuzu', 'gray', { str: 10, def: 3, vit: 4, enr: 7 }], ['Goma', 'dark', { str: 4, def: 7, vit: 9, enr: 4 }], ['Sora', 'cream', { str: 8, def: 6, vit: 4, enr: 6 }]];
+function myGhost() { const src = storySave || C.load(STORE) || C.newPlayer(); return K.ghostSnapshot('you', 'Shiba (you)', { ...src, coat: 'golden' }); }
+function tourneyEntrants() { return K.seedBracket([myGhost(), ...GHOST_NAMES.map(([n, coat, st]) => ({ ...K.ghostSnapshot('g_' + n.toLowerCase(), n + ' (ghost)', { stats: st, cosmetics: {} }), coat }))]); }
+function tourneyDecide(a, b, week) { const T = G.tour; if (a.id !== 'you' && b.id !== 'you') return K.simMatch(a, b, week); const key = a.id + '|' + b.id; if (key in T.res) return T.res[key] === a.id ? a : b; if (!T.pending) T.pending = { key, opp: a.id === 'you' ? b : a }; return a.id === 'you' ? a : b; }
+function startTourney() {
+  storySave = G.p ? JSON.parse(JSON.stringify(G.p)) : null; if (G.mode === 'story' && G.p) saveGame(true);
+  const p = STD_BUILD(); p.cosmetics = { ...(storySave?.cosmetics || G.net.cos || p.cosmetics) }; G.p = p; G.mode = 'tourney'; G.menu = null; G.state = 'play';
+  G.run = { mode: 'tourney', t0: performance.now(), deaths: 0, week: K.weekId(Date.now()) }; G.tour = { week: G.run.week, ents: tourneyEntrants(), res: {}, round: 0 }; nextTourneyMatch();
+}
+function nextTourneyMatch() { const T = G.tour; T.pending = null; T.out = K.runBracket(T.ents, T.week, tourneyDecide);
+  if (T.pending && !T.lost) { T.round++; C.init(P()); pl.stage = 0; enterArea('mountain', 20, 13); const o = T.pending.opp; const e = spawnEnemy('kitten', 20 * TILE, 6 * TILE); Object.assign(e, { type: 'ghost', ghost: o, coat: o.coat, hp: 260, max: 260, T: { r: 8, dmg: 12, xp: 0, bones: 0, speed: 60 }, kind: 'walk', kt: 0, dir: 0 });
+    Audio8.music('boss'); G.banner = { text: `${['QUARTER', 'SEMI', ''][T.round - 1] || ''}FINAL vs ${o.name}`.replace('vs', 'VS'), t: 2.5 }; return; }
+  const place = T.out.placements.findIndex((x) => x.id === 'you'); T.place = place < 0 ? 4 : place; finishTourney(); }
+function tourneyResult(won) { const T = G.tour; if (!T?.pending) return; T.res[T.pending.key] = won ? 'you' : T.pending.opp.id; if (!won) T.lost = true; G.enemies.forEach((e) => (e.dead = true)); G.shots = [];
+  toast(won ? 'Victory!' : 'Defeated...'); setTimeout(nextTourneyMatch, 900); }
+function finishTourney() { const T = G.tour, out = T.out, n = G.net; n.tourney = { week: T.week, placements: out.placements.map((p) => p.name), place: T.place }; saveNet();
+  const lbl = ['1st', '2nd', 'Top 4', 'Top 4', 'Top 8'][T.place]; Audio8.music('wish');
+  openMenu({ title: 'Tournament of Paws', noBack: true, info: () => [`Your finish: ${lbl}`, ...out.rounds.map((r, i) => ['QF', 'SF', 'Final'][i] + ': ' + r.map((m) => m.w.replace('g_', '')).join(', ')), 'Ghost builds normalised to the same stat budget.'],
+    items: [{ label: 'Return to story', act: () => endRun(true) }] }); }
+function updateGhost(e, dt) { const dx = pl.x - e.x, dy = pl.y - e.y, d = Math.hypot(dx, dy) || 1; e.kt -= dt; e.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 2 : 3) : (dy < 0 ? 1 : 0);
+  if (e.kb > 0) { e.kb -= dt; moveBody(e, e.vx * dt, e.vy * dt, 5, 3); return; } const st = e.ghost.stats, sp = 50 + st.enr * 1.5, guard = e.ghost.style === 'guard';
+  if (e.kt <= 0) e.kind = 'walk';
+  if (d > 20) { moveBody(e, dx / d * sp * dt, dy / d * sp * dt, 5, 3); e.moving = true; e.walk = (e.walk || 0) + dt; } else e.moving = false;
+  if (d < 26 && e.cd < 0) { e.cd = guard ? 0.9 : 0.6; e.kind = Math.random() < 0.3 ? 'kick' : 'punch'; e.kt = 0.25; setTimeout(() => { if (!e.dead && Math.hypot(pl.x - e.x, pl.y - e.y) < 28) hurtPlayer(8 + st.str * 0.6, e.x, e.y); }, 120); }
+  if (d > 70 && e.cd < -1.2) { e.cd = 1.4; e.kind = 'beam'; e.kt = 0.3; G.shots.push({ x: e.x, y: e.y - 12, vx: dx / d * 150, vy: dy / d * 150, r: 4, dmg: 10 + st.str * 0.4, t: 2, col: '#d0a0ff' }); Audio8.sfx('blast'); } }
+function drawGhost(e, ox, oy) { const img = heroFrame(e.coat, 0, DIRS[e.dir], e.moving ? Math.floor(e.walk * 9) % 4 : 0, e.kind, { top: 'jacket_black', bottom: 'slacks_black', feet: 'sneakers_gold' });
+  ctx.globalAlpha = 0.85; ctx.drawImage(img, Math.round(e.x - FORM_W / 2 - ox), Math.round(e.y - FORM_H + 2 - oy)); ctx.globalAlpha = 1; if (e.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.drawImage(img, Math.round(e.x - FORM_W / 2 - ox), Math.round(e.y - FORM_H + 2 - oy)); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  text(e.ghost.name, Math.round(e.x - ox), Math.round(e.y - FORM_H - 6 - oy), '#d0c0ff', 6, 'center'); R(e.x - 12 - ox, e.y - FORM_H - 12 - oy, 24, 3, '#1a1420'); R(e.x - 11 - ox, e.y - FORM_H - 11 - oy, Math.ceil(22 * e.hp / e.max), 1, '#d0a0ff'); }
+function tourneyMenu() {
+  openMenu({ title: 'Tournament of Paws', info: () => [SIM, 'Free weekly 8-ghost bracket. You fight live; other matches use saved ghosts.', 'All builds normalised to the same stat budget. Pool split 50/25/12.5/12.5 by placement.', `Tourney pool (30% of weekly): ${K.fmtK(Math.floor(G.net.pools.weekly * 0.3))} KIBBLE`, G.net.tourney ? `Last: ${['1st', '2nd', 'Top 4', 'Top 4', 'Top 8'][G.net.tourney.place]} (week ${G.net.tourney.week})` : ''],
+    items: [{ label: 'Enter this week (free)', act: startTourney }, { label: 'Settle tournament pool (sim)', act: async () => { const t = G.net.tourney; if (!t) return toast('Play this week first'); const amt = Math.floor(G.net.pools.weekly * 0.3), pl4 = t.placements.map((name, i) => ({ id: name.includes('you') ? 'you' : name, name })); const out = K.tourneyPayout(amt, pl4); G.net.pools.weekly -= out.reduce((a, o) => a + o.amountU, 0); const m = out.find((o) => o.id === 'you'); if (m) G.net.wallet.balU += m.amountU; saveNet(); await refreshWallet(); toast(out.length ? out.map((o) => `${o.name.split(' ')[0]} ${K.fmtK(o.amountU)}`).join(', ') : 'Pool empty', 3); } }, { label: 'Back', act: closeMenu }] });
+}
+function bountyContribs(b) { const mine = G.net.bounty?.[b.id] || {}, r = K.mulberry32(K.weekId(Date.now()) * 7 + b.goal), base = {}; ['Mochi', 'Kuro', 'Hana', 'Yuzu', 'Goma'].forEach((n) => (base['sim_' + n] = Math.floor(b.goal * (0.12 + r() * 0.07)))); return { ...base, ...mine }; }
+function bountyMenu() {
+  openMenu({ title: 'Cate Bounty Board', info: () => [SIM, 'Community goals. When met, a pool share is split by contribution.', ...K.BOUNTIES.map((b) => { const c = bountyContribs(b), t = K.bountyTotal(c); return `${b.name}: ${t}/${b.goal} (you ${c.you || 0}) share ${b.shareBps / 100}% of weekly`; })],
+    items: () => [...K.BOUNTIES.map((b) => ({ label: `Settle: ${b.name}`, act: async () => { const r = K.settleBounty(G.root, b, bountyContribs(b)); if (!r.ok) return toast(r.reason); const m = r.payouts.find((o) => o.id === 'you'); if (m) G.net.wallet.balU += m.amountU; saveNet(); await refreshWallet(); toast(`Paid ${r.payouts.length} contributors${m ? `, you ${K.fmtK(m.amountU)}` : ''}`, 3); } })), { label: 'Back', act: closeMenu }] });
+}
+function seasonMenu() { const now = Date.now(), se = K.currentSeason(now);
+  openMenu({ title: 'Seasons', info: () => [SIM, ...K.SEASONS.map((x) => { const a = K.seasonAccess(x, now, G.holdU || 0); return `${x.name}: ${a.open ? (a.early ? 'HOLDER EARLY ACCESS' : 'open') : 'closed'}`; }), 'Holders (Hound+) get a 2-day early-access weekend.'],
+    items: () => [...se.set.map((id) => { const c = K.COSMETICS[id], own = G.net.owned.includes(id), q = K.feeSplit(K.toU(c.shop)); return { label: `${c.name} ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: 'Limited to ' + se.name, disabled: own, act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.buySeasonItem(G.root, id, now, G.holdU || 0); toast(r.ok ? 'Season item unlocked (sim)' : r.reason); saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] }); }
+function burnMenu() {
+  openMenu({ title: 'Burn for Legends', info: () => [SIM, `Public KIBBLE burned: ${K.fmtK(K.publicBurned(G.root))}`, `You burned: ${K.fmtK(G.net.burnedU || 0)}. Burns have no fee: 100% is burned.`],
+    items: () => [...Object.entries(K.COSMETICS).filter(([, c]) => c.burn).map(([id, c]) => { const own = G.net.owned.includes(id); return { label: `${c.name}  ${own ? 'UNLOCKED' : 'burn ' + c.burn + ' K'}`, disabled: own, act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.burnForLegend(G.root, id); toast(r.ok ? `Burned ${K.fmtK(r.burnedU)} (sim). Legend unlocked!` : r.reason); if (r.ok) { Audio8.sfx('ascend'); burst(pl.x, pl.y - 16, '#ff6a2a', 30, 90); } saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] });
+}
+function launchMenu() { const q = K.listingQuote();
+  openMenu({ title: 'Fighter Launches (stub)', info: () => [SIM, 'Launch Hall community tokens sponsor a warrior skin.', `Listing: ${K.LISTING_FEE} K fee to treasury + 2% split = ${K.fmtK(q.total)} K`, ...(G.net.launches || []).slice(0, 3).map((l) => `${l.token} sponsors ${l.skin}: ${l.status}`), '$WOOF sponsors Kai Surf skin: live (sample)'],
+    items: [{ label: 'List $PAWS sponsoring "Violet Crackle"', act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.listFighter(G.root, { token: '$PAWS', skin: 'Violet Crackle' }); toast(r.ok ? 'Listing submitted (stub)' : r.reason); saveNet(); await refreshWallet(); } }, { label: 'Back', act: closeMenu }] }); }
 
 // ---------------- title ----------------
 function toTitle() { G.state = 'title'; G.mode = 'story'; G.menu = null; G.dialog = null; Audio8.music('title'); titleMenu(); }
@@ -463,9 +518,10 @@ function drawAura(cx, fy, stage, col, k = 1) {
       ctx.fillRect(Math.round(cx + x), Math.round(fy + 2 - h), 1, Math.round(h)); } }
   ctx.globalAlpha = 1;
 }
-function drawBolts(cx, fy, n, k = 1) { // crackling blue-white lightning arcs
+function drawBolts(cx, fy, n, k = 1, tint) { // crackling blue-white lightning arcs (holder bolt skins recolour them)
+  const bc = tint || boltColor();
   for (let b = 0; b < n; b++) { let x = cx + (Math.random() - 0.5) * 26 * k, y = fy - 6 - Math.random() * 30 * k; const segs = 4 + (Math.random() * 3 | 0);
-    for (let i = 0; i < segs; i++) { const nx = x + (Math.random() - 0.5) * 10, ny = y + (Math.random() - 0.3) * 8; line(x, y, nx, ny, i % 2 ? '#7fd0ff' : '#f0fbff'); x = nx; y = ny; } }
+    for (let i = 0; i < segs; i++) { const nx = x + (Math.random() - 0.5) * 10, ny = y + (Math.random() - 0.3) * 8; line(x, y, nx, ny, i % 2 ? bc : '#f0fbff'); x = nx; y = ny; } }
 }
 function line(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) | 0; ctx.fillStyle = c; for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / (n || 1)), Math.round(y0 + (y1 - y0) * i / (n || 1)), 1, 1); }
 const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
@@ -485,14 +541,14 @@ function drawWorld() {
     ctx.strokeStyle = '#c8b090'; ctx.lineWidth = 1; ctx.stroke(); if (c.t < 0.6) { ctx.globalAlpha = 1 - c.t / 0.6; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(Math.round(c.x - ox), Math.round(c.y - oy), c.r * 0.5 + c.t * 120, (c.r * 0.5 + c.t * 120) * 0.38, 0, 0, 7); ctx.stroke(); } ctx.globalAlpha = 1; }
   const shadow = (x, y, w = 7) => { ctx.fillStyle = 'rgba(20,20,30,.3)'; ctx.beginPath(); ctx.ellipse(Math.round(x - ox), Math.round(y - oy), w, 2.5, 0, 0, 7); ctx.fill(); };
   for (const n of a.npcs) depth.push({ y: n.y * TILE, f: () => { const x = n.x * TILE, y = n.y * TILE; shadow(x, y); const fr = n.moving ? Math.floor(n.walk * 7) % 4 : 0, spark = n.spark && pl.stage > 0 && Math.hypot(x - pl.x, y - pl.y) < 100;
-    if (spark) { drawAura(x - ox, y - oy, 1, '#9ff0ff', 0.75); if (Math.random() < 0.3) drawBolts(x - ox, y - oy, 1, 0.8); }
+    if (spark) { drawAura(x - ox, y - oy, 1, '#9ff0ff', 0.75); if (Math.random() < 0.3) drawBolts(x - ox, y - oy, 1, 0.8, '#7fd0ff'); }
     const img = n.human ? A.humans[n.human + (spark ? '_spark' : '')][fr] : shibaSprite(n.coat, n.face, fr, n.eq); ctx.drawImage(img, Math.round(x - img.width / 2 - ox), Math.round(y - img.height + 1 - oy));
     if (Math.hypot(x - pl.x, y - pl.y) < 30 && !G.dialog) { const bob = Math.floor(G.t * 3) % 2; R(x - ox - 1, y - 38 - oy - bob, 3, 5, '#ffe066'); R(x - ox - 1, y - 32 - oy - bob, 3, 2, '#ffe066'); } } });
   if (G.mode === 'story') for (const it of a.pickups) if (!P().flags['got_' + it.key]) depth.push({ y: it.y * TILE, f: () => { const bob = Math.round(Math.sin(G.t * 4) * 2), x = it.x * TILE - ox, y = it.y * TILE - oy; shadow(it.x * TILE, it.y * TILE, 5);
     if (it.kind === 'orb') { ctx.globalAlpha = 0.35 + Math.sin(G.t * 5) * 0.15; R(x - 9, y - 18 + bob, 18, 18, '#b6ffb0'); ctx.globalAlpha = 1; ctx.drawImage(A.orbs[it.n - 1], Math.round(x - 7), Math.round(y - 16 + bob)); } else ctx.drawImage(A.chest, Math.round(x - 8), Math.round(y - 13)); } });
   if (G.mode === 'hunt') for (const o of G.hunt.orbs) if (o.area === a.id && !G.hunt.got.includes(o.id)) depth.push({ y: o.y * TILE, f: () => { const bob = Math.round(Math.sin(G.t * 4) * 2), x = o.x * TILE - ox, y = o.y * TILE - oy; ctx.globalAlpha = 0.5; R(x - 9, y - 18 + bob, 18, 18, `hsl(${(G.t * 200 + o.n * 50) % 360},100%,70%)`); ctx.globalAlpha = 1; ctx.drawImage(A.orbs[o.n - 1], Math.round(x - 7), Math.round(y - 16 + bob)); } });
   for (const d of G.drops) depth.push({ y: d.y, f: () => ctx.drawImage(A.bone, Math.round(d.x - 6 - ox), Math.round(d.y - 8 - oy)) });
-  for (const e of G.enemies) depth.push({ y: e.y, f: () => { const fr = A[e.T.art][Math.floor(e.t * 6) % 2], wind = e.st === 'wind'; shadow(e.x, e.y, e.T.r);
+  for (const e of G.enemies) if (e.type === 'ghost') depth.push({ y: e.y, f: () => drawGhost(e, ox, oy) }); else depth.push({ y: e.y, f: () => { const fr = A[e.T.art][Math.floor(e.t * 6) % 2], wind = e.st === 'wind'; shadow(e.x, e.y, e.T.r);
     ctx.drawImage(fr, Math.round(e.x - fr.width / 2 - ox + (wind ? Math.round(Math.random() * 2 - 1) : 0)), Math.round(e.y - fr.height + 2 - oy));
     if (e.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.7; ctx.drawImage(fr, Math.round(e.x - fr.width / 2 - ox), Math.round(e.y - fr.height + 2 - oy)); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     if (e.hp < e.max) { R(e.x - 8 - ox, e.y - fr.height - 3 - oy, 16, 3, '#1a1420'); R(e.x - 7 - ox, e.y - fr.height - 2 - oy, Math.ceil(14 * e.hp / e.max), 1, '#ff5f6d'); } } });
@@ -524,11 +580,13 @@ function drawHero() {
     ctx.fillStyle = st ? '#fff3a8' : '#ffffff'; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.28 + G.t * 20, r = 2 + el * (pl.combo === 2 ? 9 : 6); ctx.fillRect(Math.round(hx + Math.cos(a) * r), Math.round(hy + Math.sin(a) * r * 0.7), 2, 1); } }
   const t = P().cosmetics.title && K.COSMETICS[P().cosmetics.title]; if (t) text(t.name, feetX, y - 2, '#ffe066', 6, 'center');
 }
+let _gp = null; function goldPepe() { if (_gp) return _gp; _gp = A.pepe.map((src) => { const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d'); g.drawImage(src, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < d.data.length; i += 4) { const [r, gg, b] = [d.data[i], d.data[i + 1], d.data[i + 2]]; if (gg > r + 15 && gg > b + 15) { const l = gg / 255; d.data[i] = Math.min(255, 255 * (0.55 + l * 0.6)); d.data[i + 1] = Math.min(255, 200 * (0.4 + l * 0.7)); d.data[i + 2] = 40 * l; } } g.putImageData(d, 0, 0); return c; }); return _gp; }
 function drawWish(ox, oy) {
   const w = G.wish, k = Math.min(1, w.t / 1.2); ctx.fillStyle = `rgba(10,20,40,${0.6 * (w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.6) : k)})`; ctx.fillRect(0, 0, VW, VH);
   if (w.phase === 'rise' && Math.random() < 0.08) { R(0, 0, VW, VH, 'rgba(200,255,200,.4)'); G.shake = 0.15; }
   const rise = w.phase === 'rise' ? Math.min(1, Math.max(0, (w.t - 0.8) / 1.4)) : w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.4) : 1; if (rise <= 0) return;
-  const img = A.pepe[Math.floor(G.t * 0.7) % 4 === 0 ? 1 : 0], px = 20 * TILE - 60 - ox, py = 2 * TILE + 40 - oy - Math.round(rise * 40);
+  const img = (w.golden ? goldPepe() : A.pepe)[Math.floor(G.t * 0.7) % 4 === 0 ? 1 : 0], px = 20 * TILE - 60 - ox, py = 2 * TILE + 40 - oy - Math.round(rise * 40);
   ctx.globalAlpha = rise; for (let i = 0; i < 7; i++) { const a = G.t * 1.5 + i / 7 * 6.28; ctx.drawImage(A.orbs[i], Math.round(20 * TILE - 7 + Math.cos(a) * 70 - ox), Math.round(py + 50 + Math.sin(a) * 22)); }
   ctx.drawImage(img, Math.round(px), Math.round(py)); ctx.globalAlpha = 1;
 }
@@ -540,7 +598,7 @@ function drawHUD() {
   R(bx + 33, by + 12, Math.round(78 * p.xp / C.xpToNext(p.level)), 1, '#9effa0');
   if (G.mode === 'hunt') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = i < G.hunt.got.length ? 1 : 0.25; ctx.drawImage(A.orbs[i], VW - 108 - rx + i * 14, 8); } ctx.globalAlpha = 1; }
   else if (G.mode === 'story') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 108 - rx + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8 - rx, 24, '#fff4e0', 7, 'right'); }
-  if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8 - rx, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
+  if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : G.mode === 'tourney' ? 'TOURNEY' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8 - rx, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
   const b = G.boss; if (b && b.st !== 'intro' && b.st !== 'down') { const w = Math.min(220, VW - 40), x = (VW - w) / 2, y = VH - 18; R(x - 1, y - 1, w + 2, 9, '#1a1420'); R(x, y, Math.round(w * b.hp / b.max), 7, '#ff7bd5'); R(x, y, Math.round(w * b.hp / b.max), 2, '#ffd0e6'); text('CATE', x, y - 10, '#ffd0e6', 8); }
 }
 function drawDialog() {
@@ -586,4 +644,4 @@ let last = performance.now();
 function frame(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; try { update(dt); render(); } catch (e) { console.error(e); window.__pbErr = String(e.stack || e); } for (const k in pressed) pressed[k] = false; requestAnimationFrame(frame); }
 resize(); toTitle(); requestAnimationFrame(frame);
 cv.addEventListener('pointerdown', () => { Audio8.unlock(); if (G.state === 'title' && G.menu?.titleScreen) press('atk'), setTimeout(() => release('atk'), 50); });
-G.enterArea = enterArea; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb;
+G.enterArea = enterArea; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb;
