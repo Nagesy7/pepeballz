@@ -1,0 +1,29 @@
+html,body{margin:0;height:100%;overflow:hidden;background:#1a1420;overscroll-behavior:none;touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+body{position:fixed;inset:0}
+#view{position:absolute;inset:0}
+#game{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+#touch{display:none;position:absolute;inset:0;pointer-events:none;font-family:"Trebuchet MS",Verdana,sans-serif}
+body.touch #touch{display:block}
+#stick{position:absolute;left:calc(18px + env(safe-area-inset-left));bottom:calc(22px + env(safe-area-inset-bottom));width:132px;height:132px;border-radius:50%;
+  background:radial-gradient(circle,#ffffff22,#ffffff10 60%,#00000030);border:3px solid #f6e7c855;pointer-events:auto;touch-action:none}
+#knob{position:absolute;left:36px;top:36px;width:60px;height:60px;border-radius:50%;background:#f6e7c8cc;border:3px solid #1a1420;box-sizing:border-box}
+#btns{position:absolute;right:calc(14px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));width:190px;height:170px;pointer-events:none}
+.b{position:absolute;pointer-events:auto;touch-action:none;width:58px;height:58px;border-radius:50%;border:3px solid #1a1420;background:#2b2440dd;color:#fff8e8;
+  font:900 20px/1 "Trebuchet MS",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;box-shadow:0 3px 0 #0008;outline:none}
+.b small{font-size:9px;font-weight:700;opacity:.8;margin-top:2px}
+.b.on{transform:translateY(2px);background:#4a4068;box-shadow:none}
+.b.big{width:76px;height:76px;right:0;bottom:30px;background:#c44a3add}
+.b.gold{background:#d4a640dd;color:#1a1420}
+[data-act=blast]{right:84px;bottom:0;background:#2f73b8dd}
+[data-act=dash]{right:84px;bottom:70px}
+[data-act=charge]{right:150px;bottom:34px}
+[data-act=ascend]{right:10px;bottom:114px}
+#menuBtn{width:44px;height:44px;right:calc(10px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));font-size:18px}
+/* portrait phones: game on top, controls in their own band below */
+@media (orientation:portrait){
+  body.touch #view{bottom:calc(210px + env(safe-area-inset-bottom));top:env(safe-area-inset-top)}
+  body.touch #touch{background:linear-gradient(#1a1420,#2b2440) bottom/100% calc(210px + env(safe-area-inset-bottom)) no-repeat}
+  body.touch #menuBtn{top:auto;bottom:calc(168px + env(safe-area-inset-bottom));right:auto;left:50%;transform:translateX(-50%)}
+}
+@media (orientation:landscape){ body.touch #view{left:env(safe-area-inset-left);right:env(safe-area-inset-right)} }

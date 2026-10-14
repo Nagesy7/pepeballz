@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1420">
+<title>PepeBallz: Cate's Fury</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="view"><canvas id="game" aria-label="PepeBallz game"></canvas></div>
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div id="btns">
+    <button data-act="atk" class="b big">A<small>hit</small></button>
+    <button data-act="blast" class="b">B<small>blast</small></button>
+    <button data-act="dash" class="b">D<small>dash</small></button>
+    <button data-act="charge" class="b">C<small>charge</small></button>
+    <button data-act="ascend" class="b gold">&#9650;<small>ascend</small></button>
+  </div>
+  <button data-act="menu" id="menuBtn" class="b">&#9776;</button>
+</div>
+<script type="module" src="src/game.js"></script>
+</body>
+</html>
