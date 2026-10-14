@@ -301,7 +301,7 @@ function updatePickups() {
 
 // ---------------- Pepe the Wish Frog ----------------
 function startWish() {
-  G.state = 'wish'; G.wish = { t: 0, phase: 'rise' }; Audio8.music('wish'); Audio8.sfx('croak'); G.shake = 0.5;
+  G.state = 'wish'; G.wish = { t: 0, phase: 'rise' }; pl.x = 20 * TILE; pl.y = 9.5 * TILE; pl.dir = 1; pl.ascend = false; Audio8.music('wish'); Audio8.sfx('croak'); G.shake = 0.5;
 }
 function updateWish(dt) {
   const w = G.wish; w.t += dt;
@@ -478,19 +478,19 @@ function drawWish(ox, oy) {
   const w = G.wish, k = Math.min(1, w.t / 1.2); ctx.fillStyle = `rgba(10,20,40,${0.6 * (w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.6) : k)})`; ctx.fillRect(0, 0, VW, VH);
   if (w.phase === 'rise' && Math.random() < 0.08) { R(0, 0, VW, VH, 'rgba(200,255,200,.4)'); G.shake = 0.15; }
   const rise = w.phase === 'rise' ? Math.min(1, Math.max(0, (w.t - 0.8) / 1.4)) : w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.4) : 1; if (rise <= 0) return;
-  const img = A.pepe[Math.floor(G.t * 0.7) % 4 === 0 ? 1 : 0], px = 20 * TILE - 60 - ox, py = 4 * TILE - 30 - oy - Math.round(rise * 70);
+  const img = A.pepe[Math.floor(G.t * 0.7) % 4 === 0 ? 1 : 0], px = 20 * TILE - 60 - ox, py = 2 * TILE + 40 - oy - Math.round(rise * 40);
   ctx.globalAlpha = rise; for (let i = 0; i < 7; i++) { const a = G.t * 1.5 + i / 7 * 6.28; ctx.drawImage(A.orbs[i], Math.round(20 * TILE - 7 + Math.cos(a) * 70 - ox), Math.round(py + 50 + Math.sin(a) * 22)); }
   ctx.drawImage(img, Math.round(px), Math.round(py)); ctx.globalAlpha = 1;
 }
 function drawHUD() {
-  const p = P(), d = D(), bx = 6, by = 6;
+  const p = P(), d = D(), bx = 6, by = 6, rx = document.body.classList.contains('touch') && VW > VH ? 22 : 0;
   panel(bx, by, 118, 34); text(`Lv ${p.level}`, bx + 6, by + 5, '#ffe066', 8);
-  const bar = (y, v, max, c1, c2, label) => { R(bx + 32, y, 80, 7, '#1a1420'); R(bx + 33, y + 1, Math.max(0, Math.round(78 * v / max)), 5, c1); R(bx + 33, y + 1, Math.max(0, Math.round(78 * v / max)), 1, c2); text(label, bx + 6, y - 1, '#fff', 7); };
+  const bar = (y, v, max, c1, c2, label) => { R(bx + 32, y, 80, 7, '#1a1420'); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 5, c1); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 1, c2); text(label, bx + 6, y - 1, '#fff', 7); };
   bar(by + 15, p.hp, d.maxHp, '#ff5f6d', '#ffb0b8', 'HP'); bar(by + 24, p.energy, d.maxEnergy, pl.ascend ? '#ffe066' : '#5cc8ff', '#ffffff', pl.ascend ? 'ASC' : 'EN');
   R(bx + 33, by + 12, Math.round(78 * p.xp / C.xpToNext(p.level)), 1, '#9effa0');
-  if (G.mode === 'hunt') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = i < G.hunt.got.length ? 1 : 0.25; ctx.drawImage(A.orbs[i], VW - 108 + i * 14, 8); } ctx.globalAlpha = 1; }
-  else if (G.mode === 'story') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 108 + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8, 24, '#fff4e0', 7, 'right'); }
-  if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
+  if (G.mode === 'hunt') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = i < G.hunt.got.length ? 1 : 0.25; ctx.drawImage(A.orbs[i], VW - 108 - rx + i * 14, 8); } ctx.globalAlpha = 1; }
+  else if (G.mode === 'story') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 108 - rx + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8 - rx, 24, '#fff4e0', 7, 'right'); }
+  if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8 - rx, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
   const b = G.boss; if (b && b.st !== 'intro' && b.st !== 'down') { const w = Math.min(220, VW - 40), x = (VW - w) / 2, y = VH - 18; R(x - 1, y - 1, w + 2, 9, '#1a1420'); R(x, y, Math.round(w * b.hp / b.max), 7, '#ff7bd5'); R(x, y, Math.round(w * b.hp / b.max), 2, '#ffd0e6'); text('CATE', x, y - 10, '#ffd0e6', 8); }
 }
 function drawDialog() {
@@ -529,7 +529,7 @@ function render() {
   if (G.banner) { const a = Math.min(1, G.banner.t * 2); ctx.globalAlpha = a; const w = Math.min(VW - 20, G.banner.text.length * 7 + 30); panel((VW - w) / 2, VH * 0.2, w, 20); text(G.banner.text, VW / 2, VH * 0.2 + 6, '#ffe066', 9, 'center'); ctx.globalAlpha = 1; }
   if (G.dialog) drawDialog();
   if (G.menu) drawMenu();
-  if (G.toast) { const w = Math.min(VW - 20, G.toast.msg.length * 5.5 + 20); panel((VW - w) / 2, 46, w, 16); text(G.toast.msg, VW / 2, 50, '#fff8e8', 7, 'center'); }
+  if (G.toast) { const w = Math.min(VW - 20, G.toast.msg.length * 5.5 + 20); panel((VW - w) / 2, VH - 26, w, 16); text(G.toast.msg, VW / 2, VH - 22, '#fff8e8', 7, 'center'); }
   if (G.fade > 0) { ctx.fillStyle = `rgba(10,8,20,${G.fade})`; ctx.fillRect(0, 0, VW, VH); }
 }
 // ---------------- loop ----------------
