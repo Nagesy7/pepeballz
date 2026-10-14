@@ -47,7 +47,7 @@ function ascend(G, view, stage, coat, frame) {
   for (let y = 0; y <= 4; y++) for (let x = view === 'side' ? 6 : 6; x <= (view === 'side' ? 16 : 15); x++) { const c = G.get(x, y + by); if (c && !Object.values(S.pal).includes(c)) G.set(x, y + by, S.pal.base); }
   const cols = S.spike, big = stage >= 2, hb = 3 + by;
   if (stage === 3) { const M = S.mane; // long flowing mane, drawn behind (only into empty cells) except the back view
-    if (view === 'down') for (let y = 4; y < 26; y++) { const w = y < 8 ? 2 : y < 20 ? 3 : 2; for (let k = 0; k < w; k++) { for (const x of [-1 - k + 1, GW - k + (k ? 0 : 0)]) if (!G.get(x - 1, y + by)) G.set(x - 1, y + by, (y + k) % 3 ? M[0] : M[1]); } }
+    if (view === 'down') for (let y = 4; y < 27; y++) { const w = y < 7 ? 1 : y < 22 ? 3 : 2; for (let k = 0; k < w; k++) for (const x of [-k, GW - 1 + k]) if (!G.get(x, y + by)) G.set(x, y + by, (y + k) % 3 ? M[0] : M[1]); }
     if (view === 'up') for (let y = 3; y < 25; y++) { const half = y < 6 ? 6 : y < 20 ? 8 : 8 - (y - 20) * 2; for (let x = 11 - half; x < 11 + half; x++) G.set(x, y + by, ((x + y) % 4 === 0) ? M[1] : ((x * 7 + y) % 5 === 0 ? M[2] : M[0])); }
     if (view === 'side') for (let y = 2; y < 26; y++) { const x0 = y < 6 ? 3 : 0 - Math.floor((y - 6) / 6), x1 = y < 6 ? 7 : 5; for (let x = x0; x <= x1; x++) if (!G.get(x, y + by)) G.set(x, y + by, (x + y) % 3 ? M[0] : M[1]); }
   }

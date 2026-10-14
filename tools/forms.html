@@ -1,0 +1,10 @@
+<!doctype html><body style="margin:0;background:#3a5a3a"><canvas id=c></canvas><script type=module>
+import { heroFrame, FORM_W, FORM_H, STAGES } from '../src/forms.js';
+const eq = { top: 'hoodie_maroon', bottom: 'jeans_ripped', feet: 'sneakers_red' }, S = 4, faces = ['down', 'up', 'left', 'right'];
+const cols = [...[0,1,2,3].map(f => ['walk', f]), ['punch', 0], ['kick', 0], ['beam', 0]];
+const c = document.getElementById('c'); c.width = (FORM_W * faces.length * cols.length + 40) * S / 2.2; c.height = (FORM_H + 10) * 4 * S;
+const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.scale(S / 2.2 * 1, S); 
+let x = 0; c.width = FORM_W * cols.length * faces.length * 2 + 200; const g2 = c.getContext('2d'); g2.imageSmoothingEnabled = false;
+STAGES.forEach((st, s) => { faces.forEach((f, fi) => cols.forEach(([k, fr], ci) => { g2.drawImage(heroFrame('golden', s, f, fr, k, eq), (fi * cols.length + ci) * FORM_W * 2, s * (FORM_H + 8) * 2, FORM_W * 2, FORM_H * 2); })); });
+window.done = true;
+</script>
