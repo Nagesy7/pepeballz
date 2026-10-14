@@ -35,13 +35,36 @@ const browser = await chromium.launch();
   check('desktop: Howl Blast spends energy', sb.en < e0); await page.waitForTimeout(400);
   await page.keyboard.down('KeyC'); await page.waitForTimeout(800); await page.screenshot({ path: 'proof/desktop-07-charge.png' }); await page.keyboard.up('KeyC'); check('desktop: charging restores energy', (await S(page)).en > sb.en);
   const xd = (await S(page)).x; await page.keyboard.down('ArrowLeft'); await tap(page, 'Space'); await page.keyboard.up('ArrowLeft'); check('desktop: dash moves quickly', xd - (await S(page)).x > 25);
-  await page.evaluate(() => { const G = window.__pb; G.p.energy = 200; }); await tap(page, 'KeyQ'); await page.waitForTimeout(500); await page.screenshot({ path: 'proof/desktop-08-ascend.png' });
+  await page.evaluate(() => { const G = window.__pb; G.p.energy = 200; }); await tap(page, 'KeyQ'); await page.waitForTimeout(300); check('desktop: transform cutscene plays', (await S(page)).state === 'cut'); await page.waitForTimeout(1600); await page.screenshot({ path: 'proof/desktop-08-ascend.png' });
   const sa = await S(page); check('desktop: Ascend transform on', sa.asc); await page.waitForTimeout(800); check('desktop: Ascend drains energy', (await S(page)).en < sa.en);
   // XP: kill weak kitten
   await page.evaluate(() => { const G = window.__pb; G.enemies.forEach((e) => (e.dead = true)); G.pl.dir = 3; }); await page.waitForTimeout(50);
   await page.evaluate(() => { const G = window.__pb; G.enemies.push({ type: 'kitten', x: G.pl.x + 15, y: G.pl.y, hp: 3, max: 22, T: { hp: 22, dmg: 0, xp: 40, bones: 3, speed: 0, r: 7, art: 'kitten' }, vx: 0, vy: 0, kb: 0, flash: 0, cd: 9, st: 'wander', t: 0, wx: 0, wy: 0 }); });
   const lv0 = await S(page); await tap(page, 'KeyJ'); await page.waitForTimeout(400); const lv1 = await S(page);
   check('desktop: kill grants XP / level up', lv1.lvl > lv0.lvl || lv1.xp > lv0.xp, `lvl ${lv0.lvl}->${lv1.lvl}`); await page.screenshot({ path: 'proof/desktop-09-levelup.png' }); await tap(page, 'KeyQ');
+  // ---- Ascend stages, cutscene frames, poses ----
+  await tap(page, 'KeyQ'); await page.waitForTimeout(200); check('desktop: Ascend released back to base', (await S(page)).asc === false);
+  await page.evaluate(() => { const G = window.__pb; G.enemies.forEach((e) => (e.dead = true)); G.enterArea('village', 20.5, 18); G.p.energy = 999; G.craters.length = 0; G.parts.length = 0; G.pl.charge = false; }); await page.waitForTimeout(500);
+  const stageShot = async (n) => { const b = await page.evaluate(() => { const G = window.__pb, c = document.getElementById('game'), r = c.getBoundingClientRect(), k = r.width / c.width * (c.width / Math.ceil(c.width / Math.max(1, Math.floor(Math.min(c.width, c.height) / 230)))); return { x: (G.pl.x - G.cam.x) * k, y: (G.pl.y - G.cam.y) * k, k }; });
+    await page.screenshot({ path: `proof/stage-${n}.png`, clip: { x: Math.max(0, b.x - 45 * b.k), y: Math.max(0, b.y - 80 * b.k), width: 90 * b.k, height: 92 * b.k } }); };
+  await stageShot(0);
+  await tap(page, 'KeyQ'); await page.waitForTimeout(450); await page.screenshot({ path: 'proof/cutscene-1-powerup.png' }); await page.waitForTimeout(560); await page.screenshot({ path: 'proof/cutscene-2-flash.png' });
+  await page.waitForTimeout(250); await page.screenshot({ path: 'proof/cutscene-3-crater.png' }); await page.waitForTimeout(900);
+  check('desktop: Golden Howl (stage 1)', (await page.evaluate(() => window.__pb.pl.stage)) === 1); await stageShot(1);
+  await tap(page, 'KeyQ'); await page.waitForTimeout(200); check('desktop: Storm Howl locked before Cate (press releases)', (await page.evaluate(() => window.__pb.pl.stage)) === 0);
+  await page.evaluate(() => { const G = window.__pb; G.p.flags.cateDown = true; G.p.energy = 999; }); await tap(page, 'KeyQ'); await page.waitForTimeout(1900); await tap(page, 'KeyQ'); await page.waitForTimeout(1900);
+  check('desktop: Storm Howl unlocked after Cate (stage 2)', (await page.evaluate(() => window.__pb.pl.stage)) === 2); await stageShot(2);
+  const drain = async () => { const a = (await S(page)).en; await page.waitForTimeout(500); return a - (await S(page)).en; }; const d2 = await drain();
+  await page.evaluate(() => { const G = window.__pb; G.p.level = 15; G.p.energy = 999; }); await tap(page, 'KeyQ'); await page.waitForTimeout(1900);
+  check('desktop: Primal Howl at level 15 (stage 3)', (await page.evaluate(() => window.__pb.pl.stage)) === 3); await stageShot(3); await page.screenshot({ path: 'proof/desktop-21-primal-howl.png' });
+  const d3 = await drain(); check('desktop: higher stage drains faster', d3 > d2, `${d2.toFixed(1)} < ${d3.toFixed(1)}`);
+  await page.evaluate(() => { window.__pb.pl.dir = 3; }); await tap(page, 'KeyJ', 30); await page.waitForTimeout(60); await page.screenshot({ path: 'proof/pose-punch.png' });
+  await page.waitForTimeout(150); await tap(page, 'KeyJ', 30); await page.waitForTimeout(220); await tap(page, 'KeyJ', 30); await page.waitForTimeout(80); await page.screenshot({ path: 'proof/pose-kick.png' }); check('desktop: kick on 3rd combo hit', (await page.evaluate(() => window.__pb.pl.combo)) === 2);
+  await page.waitForTimeout(400); await tap(page, 'KeyK', 30); await page.waitForTimeout(60); await page.screenshot({ path: 'proof/pose-beam.png' }); check('desktop: beam pose', (await page.evaluate(() => window.__pb.pl.beamT)) > 0);
+  await page.evaluate(() => { const G = window.__pb; G.pl.x = 21 * 16; G.pl.y = 22 * 16; }); await page.waitForTimeout(500); await page.screenshot({ path: 'proof/human-spark.png' });
+  const npcMoved = await page.evaluate(() => window.__pb.area.npcs.some((n) => n.hx != null && Math.hypot(n.x - n.hx, n.y - n.hy) > 0.2)); check('desktop: NPCs walk around', npcMoved);
+  await tap(page, 'KeyQ'); await page.evaluate(() => { const G = window.__pb; G.p.level = 4; G.p.flags.cateDown = false; G.enterArea('forest', 6, 15); });
+  await page.waitForTimeout(300);
   // menu: items & stats
   await tap(page, 'Enter'); await page.waitForTimeout(200); check('desktop: pause menu', (await S(page)).menu === 'Menu');
   await tap(page, 'KeyJ'); await page.waitForTimeout(250); await page.screenshot({ path: 'proof/desktop-10-items.png' }); check('desktop: inventory opens', (await S(page)).menu === 'Items');
@@ -101,7 +124,7 @@ async function mobile(label, device, landscape) {
   // multi-touch: hold stick + tap A
   const [ax, ay] = await box('[data-act=atk]'); await touch('touchMove', [[sx, sy - 55], [ax, ay]]); await page.waitForTimeout(80); await touch('touchMove', [[sx, sy - 55]]); await touch('touchEnd', []);
   const s1 = await S(page); check(`${label}: thumb stick walks`, s1.y < s0.y - 15, `dy=${(s1.y - s0.y).toFixed(1)}`);
-  await page.evaluate(() => { const G = window.__pb; G.p.energy = 200; }); await tapBtn('[data-act=ascend]'); await page.waitForTimeout(300); check(`${label}: Ascend button`, (await S(page)).asc);
+  await page.evaluate(() => { const G = window.__pb; G.p.energy = 200; }); await tapBtn('[data-act=ascend]'); await page.waitForTimeout(1900); check(`${label}: Ascend button`, (await S(page)).asc);
   const e0 = (await S(page)).en; await tapBtn('[data-act=blast]'); check(`${label}: Blast button`, (await S(page)).en < e0); await page.waitForTimeout(80); await page.screenshot({ path: `proof/${label}-03-ascend-blast.png` });
   const x0 = await S(page); await tapBtn('[data-act=dash]'); await page.waitForTimeout(200); const x1 = await S(page); check(`${label}: Dash button`, Math.hypot(x1.x - x0.x, x1.y - x0.y) > 20);
   await tapBtn('#menuBtn'); await page.waitForTimeout(200); check(`${label}: menu button`, (await S(page)).menu === 'Menu'); await page.screenshot({ path: `proof/${label}-04-menu.png` }); await tapBtn('[data-act=blast]');
@@ -110,6 +133,10 @@ async function mobile(label, device, landscape) {
   const inside = await page.evaluate(() => [...document.querySelectorAll('#stick,.b')].every((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; }));
   check(`${label}: all controls inside viewport`, inside);
   await page.touchscreen.tap(10, 10); await page.waitForTimeout(100); check(`${label}: still no scroll after touches`, (await page.evaluate(() => scrollY)) === 0);
+  if (label.includes('portrait')) { await page.evaluate(() => { const G = window.__pb; G.menu = null; for (let i = 1; i <= 7; i++) G.C.addOrb(G.p, 'orb' + i); G.enterArea('village', 20, 6.5); G.pl.dir = 1; }); await page.waitForTimeout(400);
+    await tapBtn('[data-act=atk]'); await page.waitForTimeout(2700); await page.screenshot({ path: `proof/${label}-05-pepe.png` });
+    const fit = await page.evaluate(() => { const G = window.__pb; const left = 20 * 16 - 60 - G.cam.x; return left >= 0 && left + 120 <= Math.ceil(document.getElementById('game').width / Math.max(1, Math.floor(Math.min(document.getElementById('game').width, document.getElementById('game').height) / 230))); });
+    check(`${label}: Pepe fits on screen`, fit); }
   check(`${label}: no page errors`, errs.length === 0, errs.slice(0, 2).join(' | ')); await ctx.close();
 }
 await mobile('iphone13-portrait', devices['iPhone 13'], false);

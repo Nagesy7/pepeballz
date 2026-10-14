@@ -1,5 +1,5 @@
 <!doctype html><body style="margin:0;background:#3a5a3a"><canvas id=c></canvas><script type=module>
-import { heroFrame, FORM_W, FORM_H, STAGES } from '../src/forms.js';
+import { heroFrame, FORM_W, FORM_H, STAGES } from '/src/forms.js';
 const eq = { top: 'hoodie_maroon', bottom: 'jeans_ripped', feet: 'sneakers_red' }, S = 4, faces = ['down', 'up', 'left', 'right'];
 const cols = [...[0,1,2,3].map(f => ['walk', f]), ['punch', 0], ['kick', 0], ['beam', 0]];
 const c = document.getElementById('c'); c.width = (FORM_W * faces.length * cols.length + 40) * S / 2.2; c.height = (FORM_H + 10) * 4 * S;
