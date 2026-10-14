@@ -20,7 +20,7 @@ function grid() {
 }
 
 // face: 'down' | 'up' | 'side' (side = facing right; left is mirrored)
-function paint(coatKey, face, frame, equipped) {
+export function paint(coatKey, face, frame, equipped) {
   const C = COATS[normalizeCoat(coatKey)], o = outfitLook(equipped), G = grid(), { set, rect, sym, row, srect } = G;
   const step = frame % 2 === 1 ? (frame === 1 ? -1 : 1) : 0;
   const by = frame % 2 === 1 ? 1 : 0;
