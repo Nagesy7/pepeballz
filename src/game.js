@@ -69,8 +69,8 @@ const pl = { x: 0, y: 0, dir: 0, walk: 0, moving: false, atk: 0, combo: 0, combo
 G.pl = pl;
 const STORE = (() => { try { localStorage.setItem('_t', 1); return localStorage; } catch { const m = {}; return { getItem: (k) => m[k] ?? null, setItem: (k, v) => { m[k] = String(v); } }; } })();
 const NET_KEY = 'pepeballz.net.v1';
-function loadNet() { try { G.net = JSON.parse(STORE.getItem(NET_KEY)) || {}; } catch { G.net = {}; } K.ensureNet(G.net); G.net.wallet ||= {}; }
-const saveNet = () => STORE.setItem(NET_KEY, JSON.stringify(G.net));
+function loadNet() { try { G.root = JSON.parse(STORE.getItem(NET_KEY)) || {}; } catch { G.root = {}; } G.net = K.ensureNet(G.root); G.net.wallet ||= {}; }
+const saveNet = () => STORE.setItem(NET_KEY, JSON.stringify(G.root));
 loadNet(); K.setWallet(new K.SimWallet(G.net.wallet));
 function saveGame(quiet) { if (G.mode !== 'story') return; G.p.area = G.area.id; G.p.x = pl.x; G.p.y = pl.y; C.save(STORE, G.p); saveNet(); if (!quiet) toast('Game saved'); }
 const toast = (msg, t = 2) => { G.toast = { msg, t }; };
@@ -331,7 +331,7 @@ function finishRun() {
   const row = { id: 'you', name: n.pack.tag ? `Shiba [${n.pack.tag}]` : 'Shiba (you)', timeMs: ms, deaths: r.deaths, at: Date.now() };
   const key = board === 'rush' ? 'rush' : 'huntRuns'; n[key] ||= []; n[key].push({ ...row, period: board === 'rush' ? r.day : r.week }); if (n[key].length > 40) n[key].shift();
   const ranked = K.rankRuns([...K.sampleRows(board, board === 'rush' ? r.day : r.week), ...bestMine(board)]); const mine = ranked.find((x) => x.id === 'you');
-  K.addPackPoints(n, board === 'rush' ? 'rushClear' : 'huntFinish'); if (mine.rank <= 3) K.addPackPoints(n, board === 'rush' ? 'rushTop3' : 'huntTop3'); saveNet();
+  K.addPackPoints(G.root, board === 'rush' ? 'rushClear' : 'huntFinish'); if (mine.rank <= 3) K.addPackPoints(G.root, board === 'rush' ? 'rushTop3' : 'huntTop3'); saveNet();
   setTimeout(() => { G.boss = null; openMenu({ title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, `Your rank: #${mine.rank} of ${ranked.length} (rivals simulated)`, n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
     items: [{ label: 'View leaderboards', act: leaderboardsMenu }, { label: 'Return to story', act: () => endRun(true) }] }); }, 600);
 }
@@ -359,13 +359,13 @@ function leaderboardsMenu() {
       return [`< ${names[pool]} >   pool ${K.fmtK(n.pools[pool])} KIBBLE (sim)`, 'Paid by rank: 50% / 30% / 20%. No draws, no entry fee.', ...rows]; },
     items: () => [{ label: `Board: ${tabs[tab]} (left/right)`, lr: (d) => (tab = (tab + d + 3) % 3), act: () => (tab = (tab + 1) % 3) },
       { label: 'Settle this period (sim)', sub: 'Awards the pool to the current top 3', act: async () => { const pool = tabs[tab]; const ranked = pool === 'monthly' ? cupRows().map((r) => ({ ...r, id: r.mine ? 'you' : r.tag, name: r.tag })) : boardRows(K.POOL_BOARDS[pool]);
-        const out = K.awardPool(G.net, pool, ranked, pool); const mine = out.find((o) => o.id === 'you'); if (mine) G.net.wallet.balU += mine.amountU; saveNet(); await refreshWallet();
+        const out = K.awardPool(G.root, pool, ranked, pool); const mine = out.find((o) => o.id === 'you'); if (mine) G.net.wallet.balU += mine.amountU; saveNet(); await refreshWallet();
         toast(out.length ? `Paid ${out.map((o) => `#${o.rank} ${K.fmtK(o.amountU)}`).join(', ')}` : 'Pool is empty: buy a cosmetic to seed it', 3); } }, { label: 'Back', act: closeMenu }] });
 }
 function wishShop() {
   openMenu({ title: 'Pepe Wish Shop', info: () => [SIM, 'Cosmetic only. Never changes stats. Fee 2%: 1% treasury,', '0.25% daily / 0.5% weekly / 0.25% monthly prize pools.', `Treasury ${K.OWNER_WALLET.slice(0, 6)}..${K.OWNER_WALLET.slice(-4)}  Balance ${K.fmtK(G.walletBal || 0)}`],
     items: () => [...K.WISH_SHOP.map((c) => { const q = K.quote(c.id), own = G.net.owned.includes(c.id); return { label: `${c.name}  ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: own ? 'Equip it in Cosmetics' : `${K.fmtK(q.price)} + fee ${K.fmtK(q.fee)} (treasury ${K.fmtK(q.owner)}, pools ${K.fmtK(q.daily)}/${K.fmtK(q.weekly)}/${K.fmtK(q.monthly)})`, disabled: own,
-      act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.buyWish(G.net, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Wish granted: ${c.name} (sim)`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
+      act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Wish granted: ${c.name} (sim)`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
 }
 function cosmeticsMenu() {
   const kinds = ['aura', 'beam', 'outfit', 'title'];
@@ -382,10 +382,10 @@ function packMenu() {
 }
 function raidMenu() {
   openMenu({ title: 'Co-op Cate Raid (stub)', info: () => ['Free event. Every participant gets the same reward.', 'Networking not built yet: allies are simulated.', G.lastRaid ? `Last raid: ${G.lastRaid.won ? 'WON' : 'lost'}  ${G.lastRaid.dealt} dmg  +${G.lastRaid.rewards[0].bones} bones each` : ''],
-    items: [{ label: 'Join raid with 4 sim allies', act: () => { const r = K.resolveRaid([{ id: 'you', damage: 9000 + P().level * 900 }, ...['Mochi', 'Kuro', 'Hana', 'Yuzu'].map((n, i) => ({ id: n, damage: 9000 + i * 1500 }))]); G.lastRaid = r; if (G.mode === 'story') P().bones += r.rewards[0].bones; K.addPackPoints(G.net, 'raid'); saveNet(); Audio8.sfx('level'); toast(`Raid ${r.won ? 'won' : 'over'}: everyone +${r.rewards[0].bones} bones`); } }, { label: 'Back', act: closeMenu }] });
+    items: [{ label: 'Join raid with 4 sim allies', act: () => { const r = K.resolveRaid([{ id: 'you', damage: 9000 + P().level * 900 }, ...['Mochi', 'Kuro', 'Hana', 'Yuzu'].map((n, i) => ({ id: n, damage: 9000 + i * 1500 }))]); G.lastRaid = r; if (G.mode === 'story') P().bones += r.rewards[0].bones; K.addPackPoints(G.root, 'raid'); saveNet(); Audio8.sfx('level'); toast(`Raid ${r.won ? 'won' : 'over'}: everyone +${r.rewards[0].bones} bones`); } }, { label: 'Back', act: closeMenu }] });
 }
 function exportMenu() {
-  const data = K.exportCosmetics(G.net, P());
+  const data = K.exportCosmetics(G.root, P());
   openMenu({ title: 'Inu Verse carry-over (stub)', info: () => ['Cosmetics only. Unsigned stub format:', ...JSON.stringify(data).match(/.{1,46}/g).slice(0, 6)],
     items: [{ label: 'Copy JSON', act: () => { navigator.clipboard?.writeText(JSON.stringify(data)).then(() => toast('Copied'), () => toast('Clipboard unavailable')); } }, { label: 'Back', act: closeMenu }] });
 }
@@ -534,7 +534,7 @@ function render() {
 }
 // ---------------- loop ----------------
 let last = performance.now();
-function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); render(); for (const k in pressed) pressed[k] = false; requestAnimationFrame(frame); }
+function frame(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; try { update(dt); render(); } catch (e) { console.error(e); window.__pbErr = String(e.stack || e); } for (const k in pressed) pressed[k] = false; requestAnimationFrame(frame); }
 resize(); toTitle(); requestAnimationFrame(frame);
 cv.addEventListener('pointerdown', () => { Audio8.unlock(); if (G.state === 'title' && G.menu?.titleScreen) press('atk'), setTimeout(() => release('atk'), 50); });
 G.enterArea = enterArea; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb;
