@@ -18,17 +18,22 @@ export function derived(p) {
   return { str: s.str, def: s.def, maxHp: 60 + s.vit * 12 + p.level * 4, maxEnergy: 60 + s.enr * 8 };
 }
 export function init(p) { const d = derived(p); p.hp = d.maxHp; p.energy = d.maxEnergy; return p; }
+// Ascend stages: 0 base, 1 Golden Howl, 2 Storm Howl, 3 Primal Howl. Higher = more power, faster drain.
+export const ASCEND_POWER = [1, 1.6, 2.0, 2.5], ASCEND_GUARD = [1, 0.8, 0.7, 0.6], ASCEND_DRAIN = [0, 7, 12, 18], ASCEND_COST = 30;
+const stageOf = (o) => o.stage ?? (o.ascended ? 1 : 0);
+// Ascend 1 from the start, Ascend 2 after defeating Cate, Ascend 3 at level 15 (or the Chapter 2 story flag).
+export const unlockedStage = (p) => (p.flags.primal || p.level >= 15 ? 3 : p.flags.cateDown ? 2 : 1);
 // kind: 0..2 combo hit, or 'blast'
 export function attackDamage(p, kind, o = {}) {
   const d = derived(p);
   let base = kind === 'blast' ? 6 + d.str * 1.6 : [4, 5, 9][kind] + d.str * 1.2;
   if (kind === 'blast' && o.charged) base *= 1.8;
-  if (o.ascended) base *= 1.6;
+  base *= ASCEND_POWER[stageOf(o)];
   return Math.max(1, Math.round(base));
 }
 export function damageTaken(p, raw, o = {}) {
   let dmg = Math.max(1, Math.round(raw - derived(p).def * 0.6));
-  if (o.ascended) dmg = Math.max(1, Math.round(dmg * 0.8));
+  const st = stageOf(o); if (st) dmg = Math.max(1, Math.round(dmg * ASCEND_GUARD[st]));
   return dmg;
 }
 export function enemyHit(e, dmg) { e.hp = Math.max(0, e.hp - dmg); return e.hp === 0; }

@@ -26,3 +26,11 @@ test('save round-trips and rejects junk', () => {
   C.save(s, p); assert.deepStrictEqual(C.load(s), JSON.parse(JSON.stringify(p)));
   assert.strictEqual(C.deserialize('nope'), null); assert.strictEqual(C.deserialize('{"v":9}'), null); assert.strictEqual(C.load(mem()), null);
 });
+
+test('ascend stages scale power and drain and unlock by story/level', () => {
+  const p = C.init(C.newPlayer()); const d = [0, 1, 2, 3].map((st) => C.attackDamage(p, 2, { stage: st }));
+  assert.ok(d[0] < d[1] && d[1] < d[2] && d[2] < d[3], d.join());
+  assert.ok(C.ASCEND_DRAIN[1] < C.ASCEND_DRAIN[2] && C.ASCEND_DRAIN[2] < C.ASCEND_DRAIN[3]);
+  assert.ok(C.damageTaken(p, 40, { stage: 3 }) < C.damageTaken(p, 40, { stage: 1 }));
+  assert.strictEqual(C.unlockedStage(p), 1); p.flags.cateDown = true; assert.strictEqual(C.unlockedStage(p), 2); p.level = 15; assert.strictEqual(C.unlockedStage(p), 3);
+});

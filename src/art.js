@@ -78,11 +78,20 @@ function orb(n) { const [c, g] = mk(14, 14); blob(g, 7, 7, 6, 6, '#58c45a', '#2f
 const [bone, bg] = mk(12, 8); bg.fillStyle = '#5a3a20'; bg.fillRect(0, 0, 12, 8); bg.clearRect(4, 0, 4, 1); bg.clearRect(4, 7, 4, 1); bg.fillStyle = '#fff4e0'; bg.fillRect(1, 1, 3, 6); bg.fillRect(8, 1, 3, 6); bg.fillRect(3, 2, 6, 4); bg.fillStyle = '#d8c8a8'; bg.fillRect(3, 5, 6, 1);
 const [chest, chg] = mk(16, 14); chg.fillStyle = '#3f2814'; chg.fillRect(0, 2, 16, 12); chg.fillStyle = '#b07a42'; chg.fillRect(1, 3, 14, 10); chg.fillStyle = '#d29a5a'; chg.fillRect(1, 3, 14, 3); chg.fillStyle = '#f6c94c'; chg.fillRect(0, 6, 16, 2); chg.fillRect(7, 5, 2, 4);
 // human ally, front-facing, matched to the 24x32 Inu sprite cell
-function human(skin, hair, shirt, pants, long) { const [c, g] = mk(24, 32); const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
-  R(7, 27, 4, 4, INK); R(13, 27, 4, 4, INK); R(7, 21, 10, 7, pants); R(11, 22, 1, 6, '#00000040'); R(6, 14, 12, 8, shirt); R(4, 15, 2, 6, shirt); R(18, 15, 2, 6, shirt); R(4, 21, 2, 2, skin); R(18, 21, 2, 2, skin);
-  blob(g, 12, 8, 6.5, 6.5, skin, '#e0a87a', null, INK); R(9, 8, 2, 2, INK); R(13, 8, 2, 2, INK); R(11, 11, 2, 1, '#8a4a3a'); R(7, 10, 1, 1, '#f0a0a0'); R(16, 10, 1, 1, '#f0a0a0');
-  blob(g, 12, 4, 7, 3.5, hair, null, null, INK); R(5, 4, 2, long ? 12 : 4, hair); R(17, 4, 2, long ? 12 : 4, hair); return c; }
+function human(skin, hair, shirt, pants, long, step = 0, eye = INK) { const [c, g] = mk(24, 32); const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const l = step ? -1 : 0, r = step ? 0 : 0, l2 = step === 2 ? -1 : 0; // step 1: left leg lifted, step 2: right leg lifted
+  R(7, 27 + (step === 1 ? -1 : 0), 4, 4, INK); R(13, 27 + (step === 2 ? -1 : 0), 4, 4, INK); R(7, 21, 10, 6, pants); R(7, 26 + (step === 1 ? -1 : 0), 4, 1, pants); R(13, 26 + (step === 2 ? -1 : 0), 4, 1, pants); R(11, 22, 1, 5, '#00000040');
+  const al = step === 2 ? -1 : 0, ar = step === 1 ? -1 : 0;
+  R(6, 14, 12, 8, shirt); R(4, 15 + al, 2, 6, shirt); R(18, 15 + ar, 2, 6, shirt); R(4, 21 + al, 2, 2, skin); R(18, 21 + ar, 2, 2, skin);
+  blob(g, 12, 8, 6.5, 6.5, skin, '#e0a87a', null, INK); R(9, 8, 2, 2, eye); R(13, 8, 2, 2, eye); R(11, 11, 2, 1, '#8a4a3a'); R(7, 10, 1, 1, '#f0a0a0'); R(16, 10, 1, 1, '#f0a0a0');
+  blob(g, 12, 4, 7, 3.5, hair, null, null, INK); R(5, 4, 2, long ? 12 : 4, hair); R(17, 4, 2, long ? 12 : 4, hair);
+  if (eye !== INK) { R(9, 8, 1, 1, '#ffffff'); R(13, 8, 1, 1, '#ffffff'); for (const [x, h] of [[6, 3], [9, 4], [12, 5], [15, 4], [18, 3]]) R(x, 1 - h + 2, 2, h, hair); }
+  return c; }
+const H = { rin: ['#f4c8a0', '#3a2a6a', '#e0603a', '#2e4a7a', 1], tomo: ['#d8a070', '#e8e8e8', '#4a7a4a', '#6a5a3a', 0], aki: ['#e8b48a', '#6a3a1a', '#3a6a8a', '#3a3a3a', 0] };
+// 'Spark' power-up for human allies: hair charges to electric white-cyan, eyes glow
+const SPARK = { rin: '#d8fbff', aki: '#e6fbff' };
+function humans() { const o = {}; for (const k in H) { o[k] = [0, 1, 0, 2].map((st) => human(...H[k], st)); if (SPARK[k]) o[k + '_spark'] = [0, 1, 0, 2].map((st) => human(H[k][0], SPARK[k], H[k][2], H[k][3], H[k][4], st, '#5ff0ff')); } return o; }
 export function buildArt() {
   return { tiles, SOLID, TALL, tall, cate: [cate(0, 0), cate(1, 0), cate(0, 1), cate(-1, 1)], kitten: [kitten(0), kitten(1)], boar: [boar(0), boar(1)], golem: [golem(0), golem(1)],
-    pepe: [pepe(0), pepe(1)], orbs: [1, 2, 3, 4, 5, 6, 7].map(orb), bone, chest, humans: { rin: human('#f4c8a0', '#3a2a6a', '#e0603a', '#2e4a7a', 1), tomo: human('#d8a070', '#e8e8e8', '#4a7a4a', '#6a5a3a', 0) } };
+    pepe: [pepe(0), pepe(1)], orbs: [1, 2, 3, 4, 5, 6, 7].map(orb), bone, chest, humans: humans() };
 }

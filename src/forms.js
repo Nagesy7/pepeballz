@@ -17,6 +17,7 @@ function pose(G, view, kind, coat) {
   const C = COATS[coat], sleeve = view === 'side' ? G.get(11, 18) || G.get(11, 16) : G.get(4, 17) || G.get(4, 16), paw = C.light;
   const clear = (x, y, w, h) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) G.set(x + i, y + j, null); };
   const move = (x, y, w, h, dx, dy) => { const buf = []; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) buf.push([x + i, y + j, G.get(x + i, y + j)]); clear(x, y, w, h); for (const [a, b, c] of buf) if (c) G.set(a + dx, b + dy, c); };
+  if (kind === 'power') { if (view === 'side') { G.rect(8, 16, 3, 3, sleeve); G.rect(8, 19, 3, 2, paw); } else { move(4, 15, 2, 7, -1, -1); move(16, 15, 2, 7, 1, -1); G.set(3, 20, paw); G.set(18, 20, paw); } return; }
   if (view === 'side') {
     if (kind === 'punch') { G.rect(12, 16, 7, 2, sleeve); G.rect(19, 15, 3, 3, paw); G.set(21, 17, C.dark); }
     if (kind === 'kick') { const pc = G.get(12, 25), fc = G.get(12, 29) || G.get(12, 28); clear(11, 24, 5, 6); G.rect(13, 23, 6, 3, pc); G.rect(19, 22, 3, 4, fc || paw); }

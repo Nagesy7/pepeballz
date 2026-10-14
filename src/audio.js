@@ -45,6 +45,10 @@ const SFX = {
   pickup: (t) => { tone('square', 880, t, 0.07, 0.2, sfxG); tone('square', 1320, t + 0.07, 0.12, 0.2, sfxG); },
   orb: (t) => [784, 988, 1175, 1568, 1976].forEach((f, i) => tone('triangle', f, t + i * 0.07, 0.3, 0.25, sfxG)),
   blip: (t) => tone('square', 1400, t, 0.025, 0.05, sfxG), select: (t) => tone('square', 660, t, 0.06, 0.2, sfxG), die: (t) => tone('sawtooth', 400, t, 0.4, 0.3, sfxG, 50),
+  roar: (t) => { // rising power-up roar: detuned saw sweep + growl + noise swell, original
+    for (const [f, d] of [[70, 0], [73, 0.003], [140, 0.006]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t + d); o.frequency.exponentialRampToValueAtTime(f * 6, t + 1.0);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3); o.connect(g); g.connect(sfxG); o.start(t); o.stop(t + 1.35); }
+    hiss(t + 0.95, 0.6, 0.5, 200, sfxG); tone('sine', 90, t + 0.95, 0.5, 0.8, sfxG, 30); },
   croak: (t) => { tone('sawtooth', 110, t, 0.25, 0.4, sfxG, 70); tone('sawtooth', 90, t + 0.3, 0.35, 0.4, sfxG, 60); }, meow: (t) => tone('sawtooth', 500, t, 0.35, 0.3, sfxG, 1100),
 };
 export const Audio8 = {

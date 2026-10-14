@@ -24,7 +24,7 @@ function village() {
   a.npcs.push({ id: 'kai', coat: 'gray', eq: { top: 'hawaiian', bottom: 'chinos', feet: 'loafers' }, x: 14, y: 16.2, face: 'right', name: 'Kai' });
   a.npcs.push({ id: 'merchant', coat: 'dark', eq: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, x: 31, y: 12, face: 'down', name: 'Biscuit Bram' });
   a.npcs.push({ id: 'pup', coat: 'tan', eq: { hat: 'cap_red' }, x: 9, y: 12, face: 'down', name: 'Pip' });
-  a.npcs.push({ id: 'rin', human: 'rin', x: 23, y: 24, face: 'down', name: 'Rin (inventor)' });
+  a.npcs.push({ id: 'rin', human: 'rin', spark: true, x: 23, y: 24, face: 'down', name: 'Rin (inventor)' });
   a.npcs.push({ id: 'tomo', human: 'tomo', x: 11, y: 24.5, face: 'down', name: 'Old Tomo' });
   a.pickups.push({ key: 'orb2', kind: 'orb', n: 2, x: 35, y: 26 }, { key: 'v_bone1', kind: 'item', id: 'bone', x: 3, y: 3 });
   return a;
@@ -55,7 +55,7 @@ function mountain() {
   a.rect(2, 16, 36, 2, 'M'); a.rect(18, 16, 4, 2, '='); a.rect(2, 2, 36, 14, '*'); for (let i = 0; i < 18; i++) a.set(3 + Math.floor(r() * 34), 2 + Math.floor(r() * 3), 'M');
   for (const [x, y] of [[8, 6], [31, 6], [8, 12], [31, 12]]) a.set(x, y, 'r');
   a.exits.push({ x: 18, y: 43, w: 4, h: 1, to: 'forest', tx: 24.5, ty: 2.5 });
-  a.npcs.push({ id: 'aki', human: 'rin', x: 17, y: 39, face: 'down', name: 'Ranger Aki' });
+  a.npcs.push({ id: 'aki', human: 'aki', spark: true, x: 17, y: 39, face: 'down', name: 'Ranger Aki' });
   a.spawns.push(['golem', 10, 33], ['kitten', 12, 36], ['golem', 28, 26], ['kitten', 22, 28], ['kitten', 30, 24], ['golem', 20, 20], ['kitten', 6, 30]);
   a.pickups.push({ key: 'orb5', kind: 'orb', n: 5, x: 5, y: 24 }, { key: 'orb6', kind: 'orb', n: 6, x: 35, y: 33 }, { key: 'm_jerky', kind: 'item', id: 'jerky', x: 34, y: 20 });
   a.boss = { x: 20, y: 7 };
