@@ -20,7 +20,7 @@ const browser = await chromium.launch();
   check('desktop: stride animation advances', s1.walk > s0.walk + 0.4);
   for (const [k, d] of [['ArrowLeft', 2], ['ArrowRight', 3], ['ArrowDown', 0]]) { await page.keyboard.down(k); await page.waitForTimeout(250); await page.keyboard.up(k); check(`desktop: face ${k}`, (await S(page)).dir === d); }
   // talk to elder at altar (walk north)
-  await page.evaluate(() => { const G = window.__pb; G.pl.x = 21.5 * 16; G.pl.y = 9.6 * 16; G.pl.dir = 1; }); await tap(page, 'KeyJ'); await page.waitForTimeout(700);
+  await page.evaluate(() => { const G = window.__pb, n = G.area.npcs.find((q) => q.id === 'elder'); n.tx = null; n.tm = 99; G.pl.x = n.x * 16; G.pl.y = n.y * 16 + 14; G.pl.dir = 1; }); await tap(page, 'KeyJ'); await page.waitForTimeout(700);
   check('desktop: NPC dialog via action key', (await S(page)).dialog); await page.screenshot({ path: 'proof/desktop-04-npc.png' }); await skipDialog(page); await page.waitForTimeout(200);
   check('desktop: elder gives Wish Orb 1', (await S(page)).orbs === 1);
   // travel to forest by walking out the east exit
