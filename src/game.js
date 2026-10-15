@@ -175,7 +175,7 @@ const TALK = {
   kai: () => say([['Kai', 'Tap J three times for a full combo. The third hit sends foes flying.'], ['Kai', 'K lets out a Howl Wave. Howl right after resting for a big one. Space dashes through attacks.']]),
   merchant: () => say([['Biscuit Bram', 'Fresh biscuits! Bones only. Cate\'s tabby kits drop them when you bonk them.'], ['Biscuit Bram', 'Fancy coats and auras? Rin\'s Pond Shop takes $KIBBLE. Cosmetic only, every pup plays fair.']], shopMenu),
   pup: () => say([['Pip', 'Arf! When I grow up I want to Unleash too! My tail already glows a little. Probably.']]),
-  rin: () => { const f = P().flags; const lines = [['Rin', 'I built a Pond Network terminal! Weekly lily hunts, a Cate boss rush, leaderboards...'], ['Rin', 'It runs on simulated KIBBLE for now. Prizes go by rank, never by luck, and entry is free.']];
+  rin: () => { const f = P().flags; const lines = [['Rin', 'I built a Pond Network terminal! Weekly lily hunts, a Cate boss rush, leaderboards...'], ['Rin', '$KIBBLE is live now: connect Phantom up top! Prizes go by rank, never by luck, and entry is free.']];
     if (!f.rinGift) { lines.push(['Rin', 'Here, take some Lily Tea for the road.']); return say(lines, () => { f.rinGift = true; C.addItem(P(), 'tea', 2); Audio8.sfx('pickup'); toast('Got Lily Tea x2'); networkMenu(); }); }
     say(lines, networkMenu); },
   tomo: () => say([['Old Tomo', 'When the pond was full, an old toad called Pondo kept it clean. Grumpy, warty, kind.'], ['Old Tomo', 'Fill it again and maybe he will come home.']]),
@@ -384,7 +384,7 @@ const fmtTime = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000
 function bestMine(board) { const n = G.net, list = (board === 'rush' ? n.rush : n.huntRuns) || [], per = board === 'rush' ? K.dayId(Date.now()) : K.weekId(Date.now()); const mine = list.filter((x) => x.period === per); return mine.length ? [K.rankRuns(mine)[0]] : []; }
 function boardRows(board) { const per = board === 'rush' ? K.dayId(Date.now()) : K.weekId(Date.now()); return K.rankRuns([...K.sampleRows(board, per), ...bestMine(board)]); }
 function cupRows() { const n = G.net; const packs = [{ tag: 'FANG', points: 140 }, { tag: 'MOCHI', points: 95 }, { tag: 'KURO', points: 60 }]; if (n.pack.tag) packs.push({ tag: n.pack.tag, points: n.pack.points, mine: true }); return K.kibbleCup(packs); }
-// purchases/burns: before launch just say so; otherwise sign in (errors become toasts, never page errors)
+// purchases/burns: if kibble-pay is unreachable say so; otherwise sign in (errors become toasts, never page errors)
 async function ensureWallet() { if (!K.DEMO && K.mode !== 'live') { toast(K.SOON_MSG, 3); return false; } try { await K.getWallet().connect(); await refreshWallet(); return true; } catch (e) { toast(e.message, 3); return false; } }
 async function refreshWallet() { const w = K.getWallet(); if (!w.address) return; G.walletBal = await w.balanceU(); G.holdU = await w.holdingsU();
   if (!w.simulated && w.inventory) { K.syncOwned(G.root, await w.inventory()); saveNet(); if (!G.shiba && K.glue) G.shiba = await K.glue.loadShiba(w.address).catch(() => null); } }

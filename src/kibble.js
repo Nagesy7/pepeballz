@@ -1,4 +1,4 @@
-// $KIBBLE network layer for the game (display title in config.js; internal id 'pepeballz'). Real kibble-pay wallet by default (purchases show 'KIBBLE launching soon' until the
+// $KIBBLE network layer for the game (display title in config.js; internal id 'pepeballz'). Real kibble-pay wallet by default ($KIBBLE is live; this note used to say 'launching soon' until the
 // $KIBBLE mint is set); SimWallet + local ledger ONLY in demo mode (?demo=1), clearly labelled.
 // Patterns and fee math follow Inu Verse src/mall.js + src/leaderboards.js:
 //   amounts are integer micro-KIBBLE (1 KIBBLE = 1,000,000 u, "millionths") so every split is exact.
@@ -33,7 +33,7 @@ export class SimWallet {
   async transfer({ amountU }) { if (amountU > this.s.balU) return { ok: false, reason: 'Insufficient simulated KIBBLE' }; this.s.balU -= amountU; return { ok: true, sig: 'SIMULATED-' + Date.now().toString(36) }; }
 }
 export const GAME = 'pepeballz';
-export const SOON_MSG = 'KIBBLE launching soon: purchases open at launch.';
+export const SOON_MSG = 'KIBBLE is live, but the wallet service is unreachable right now. Try again shortly.';
 export const DEMO = typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === '1';
 export let mode = DEMO ? 'demo' : 'loading', kp = null, serverPools = null, serverBoards = {}, serverBurnedU = 0, glue = null;
 // placeholder while kibble-pay loads: never fakes a balance
