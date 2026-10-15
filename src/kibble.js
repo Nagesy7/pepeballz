@@ -1,8 +1,8 @@
-// $KIBBLE network layer for PepeBallz. Real kibble-pay wallet by default (purchases show 'KIBBLE launching soon' until the
+// $KIBBLE network layer for the game (display title in config.js; internal id 'pepeballz'). Real kibble-pay wallet by default (purchases show 'KIBBLE launching soon' until the
 // $KIBBLE mint is set); SimWallet + local ledger ONLY in demo mode (?demo=1), clearly labelled.
 // Patterns and fee math follow Inu Verse src/mall.js + src/leaderboards.js:
 //   amounts are integer micro-KIBBLE (1 KIBBLE = 1,000,000 u, "millionths") so every split is exact.
-//   2% fee on Wish Shop purchases: 1% treasury (OWNER_WALLET), 0.25% daily, 0.5% weekly, 0.25% monthly pool.
+//   2% fee on Pond Shop purchases: 1% treasury (OWNER_WALLET), 0.25% daily, 0.5% weekly, 0.25% monthly pool.
 // Prize pools are paid by leaderboard RANK only. No random draws, no wagering, no paid entry.
 // Bones are the free in-game currency (healing, upgrades) and are never convertible to KIBBLE.
 // Purchases and holder tiers only unlock cosmetics; nothing here touches combat stats.
@@ -26,7 +26,7 @@ export function feeSplit(priceU) {
 // ---------- wallet adapter ----------
 export class SimWallet {
   constructor(store = {}) { this.id = 'sim'; this.simulated = true; this.s = store; this.s.balU ??= toU(250); this.s.holdU ??= toU(1500); this.address = null; }
-  async connect() { this.address = 'SIM' + 'x'.repeat(4) + 'PepeBallzDemo'; return this.address; }
+  async connect() { this.address = 'SIM' + 'x'.repeat(4) + 'PepeNugsDemo'; return this.address; }
   async balanceU() { return this.s.balU; }
   async holdingsU() { return this.s.holdU; }
   async burn({ amountU }) { if (amountU > this.s.balU) return { ok: false, reason: 'Insufficient simulated KIBBLE' }; this.s.balU -= amountU; return { ok: true, sig: 'SIMBURN-' + Date.now().toString(36) }; }
@@ -75,23 +75,23 @@ export const COSMETICS = {
   aura_jade: { kind: 'aura', name: 'Jade Shogun Aura', color: '#6ee07a', tier: 'shogun' }, outfit_gold: { kind: 'outfit', name: 'Gold Designer Suit', equip: { top: 'gold_suit', bottom: 'slacks_black', feet: 'sneakers_gold', neck: 'chain_gold' }, tier: 'shogun' },
   title_shogun: { kind: 'title', name: 'Shogun of Kibble', tier: 'shogun' },
   // Ascend aura skins (holders, cosmetic only). forms = which Ascend stages show it
-  skin_kibble: { kind: 'aura', name: '$KIBBLE Gold Flame', color: '#f6c94c', tier: 'hound', forms: [1, 2, 3] },
-  bolt_pepe: { kind: 'bolt', name: 'Pepe-Green Lightning', color: '#58ff7a', tier: 'hound', forms: [2, 3] },
+  skin_kibble: { kind: 'aura', name: '$KIBBLE Gold Glow', color: '#f6c94c', tier: 'hound', forms: [1, 2, 3] },
+  bolt_pepe: { kind: 'bolt', name: 'Pondweed Fireflies', color: '#58ff7a', tier: 'hound', forms: [2, 3] },
   skin_storm: { kind: 'aura', name: 'Tide Sapphire', color: '#7fb8ff', tier: 'alpha', forms: [2, 3] },
-  bolt_violet: { kind: 'bolt', name: 'Violet Crackle', color: '#d0a0ff', tier: 'alpha', forms: [2, 3] },
+  bolt_violet: { kind: 'bolt', name: 'Violet Fireflies', color: '#d0a0ff', tier: 'alpha', forms: [2, 3] },
   skin_primal: { kind: 'aura', name: 'Wild Ember Ruff', color: '#ff6a2a', tier: 'shogun', forms: [3] },
-  title_golden: { kind: 'title', name: 'Golden Wishbearer', unique: true },
+  title_golden: { kind: 'title', name: 'Golden Pondkeeper', unique: true },
   // Burn for legends (no fee: the whole amount is burned)
   legend_obsidian: { kind: 'aura', name: 'Obsidian Legend Aura', color: '#40304a', burn: 50 },
-  legend_starfall: { kind: 'bolt', name: 'Starfall Lightning', color: '#fff6a0', burn: 120 },
+  legend_starfall: { kind: 'bolt', name: 'Starfall Fireflies', color: '#fff6a0', burn: 120 },
   legend_title: { kind: 'title', name: 'Legend of the Burn', burn: 250 },
   // Season sets (limited per saga chapter)
   s1_cap: { kind: 'outfit', name: 'Fang Peak Climber', equip: { top: 'jacket_black', bottom: 'chinos', feet: 'sneakers_red', hat: 'cap_red' }, season: 'ch1', shop: 5 },
   s1_aura: { kind: 'aura', name: 'Catnip Pink Aura', color: '#ff8fc8', season: 'ch1', shop: 4 },
-  // Pepe Wish shop exclusives (bought, never tier-gated)
-  aura_frog: { kind: 'aura', name: 'Pepe Swamp Aura', color: '#58c45a', shop: 6 }, beam_rainbow: { kind: 'beam', name: 'Seven-Lily Wave', color: 'rainbow', shop: 9.5 },
-  outfit_tux: { kind: 'outfit', name: 'Wish Night Tux', equip: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, shop: 12 },
-  title_wish: { kind: 'title', name: 'Friend of Pepe', shop: 3 },
+  // Pond Shop exclusives (bought, never tier-gated)
+  aura_frog: { kind: 'aura', name: 'Lilypad Glow', color: '#58c45a', shop: 6 }, beam_rainbow: { kind: 'beam', name: 'Rainbow Ripple', color: 'rainbow', shop: 9.5 },
+  outfit_tux: { kind: 'outfit', name: 'Pond Night Tux', equip: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, shop: 12 },
+  title_wish: { kind: 'title', name: 'Friend of Pondo', shop: 3 },
 };
 const tierRank = (id) => TIERS.findIndex((t) => t.id === id);
 export const unlockedByTier = (holdU) => Object.keys(COSMETICS).filter((k) => COSMETICS[k].tier && tierRank(COSMETICS[k].tier) <= tierRank(tierFor(holdU).id));
@@ -114,16 +114,16 @@ export async function buyWish(s, id, w = wallet) {
   const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:' + id, itemId: 'pepeballz:' + id }); if (!r.ok) return r;
   if (w.simulated) settle(n, q, id, r.sig); n.owned.push(id); return { ok: true, quote: q };
 }
-// ---------- seeded weekly Wish Orb hunt ----------
+// ---------- seeded weekly Pond Lily hunt ----------
 const WEEK = 7 * 864e5, EPOCH = Date.UTC(2026, 0, 5); // a Monday
 export const weekId = (ms) => Math.floor((ms - EPOCH) / WEEK);
 export const dayId = (ms) => Math.floor((ms - EPOCH) / 864e5);
 export const monthId = (ms) => { const d = new Date(ms); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
 export function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-// spots: [{area,x,y}] candidate tiles. Returns 7 distinct spots, identical for everyone in that week.
+// spots: [{area,x,y}] candidate tiles. Returns 5 distinct spots, identical for everyone in that week.
 export function huntOrbs(week, spots) {
   const r = mulberry32(0x9e3779b9 ^ week), pool = spots.slice(), out = [];
-  while (out.length < 7 && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+  while (out.length < 5 && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
   return out.map((s, i) => ({ ...s, id: `hunt${week}_${i + 1}`, n: i + 1 }));
 }
 // Rank: fastest time, then fewer deaths, then earliest submission, then name. Deterministic.
@@ -164,11 +164,11 @@ export function sampleRows(board, period) {
   return RIVALS.map((name) => ({ id: 'sim_' + name, name: name + ' (sim)', timeMs: Math.floor((board === 'rush' ? 70 : 600) * 1000 * (0.8 + r() * 0.9)), deaths: Math.floor(r() * 3), at: Math.floor(r() * 1e6), sample: true }));
 }
 
-// ---------- 2) Pepe's Golden Orb (holders, cosmetic 8th orb) ----------
+// ---------- 2) Golden Lily (holders, cosmetic: golden Pondo at the pond restoration) ----------
 export const GOLDEN_ORB_TIER = 'alpha';
 export const goldenOrbEligible = (holdU) => tierRank(tierFor(holdU).id) >= tierRank(GOLDEN_ORB_TIER);
 export function goldenSummon(s, holdU) { const n = ensureNet(s); if (!goldenOrbEligible(holdU)) return { ok: false, reason: 'Alpha tier or higher' };
-  if (!n.owned.includes('title_golden')) n.owned.push('title_golden'); n.goldenSummons = (n.goldenSummons || 0) + 1; return { ok: true, pepe: 'golden', title: 'title_golden' }; }
+  if (!n.owned.includes('title_golden')) n.owned.push('title_golden'); n.goldenSummons = (n.goldenSummons || 0) + 1; return { ok: true, toad: 'golden', title: 'title_golden' }; }
 // ---------- 3) Tournament of Paws: weekly 1v1 bracket vs saved warrior ghosts ----------
 // A ghost is a snapshot of a player's build. For fairness every ghost fights on the same stat budget:
 // only the *shape* of the build (ratios) carries over, scaled to NORM_BUDGET.

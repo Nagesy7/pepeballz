@@ -15,11 +15,16 @@ test('xp: levels, 3 points per level, refill, spend', () => {
   assert.strictEqual(p.level, 3); assert.strictEqual(p.points, 6); assert.strictEqual(p.hp, C.derived(p).maxHp);
   const m = C.derived(p).maxHp; assert.ok(C.spendPoint(p, 'vit')); assert.ok(C.derived(p).maxHp > m); assert.strictEqual(C.spendPoint(p, 'luck'), false);
 });
-test('items, bones shop, orbs, wishes', () => {
+test('items, bones shop, 5 pond lilies with distinct buffs, pond restoration (no wishes)', () => {
   const p = C.init(C.newPlayer()); p.hp = 10; assert.ok(C.useItem(p, 'bone')); assert.strictEqual(p.hp, 50);
   assert.strictEqual(C.buyItem(p, 'bone'), false); p.bones = 20; assert.ok(C.buyItem(p, 'bone')); assert.strictEqual(p.bones, 5);
-  assert.strictEqual(C.grantWish(p, 'fang'), false); for (let i = 1; i <= 7; i++) assert.ok(C.addOrb(p, 'orb' + i)); assert.strictEqual(C.addOrb(p, 'orb1'), false);
-  const s = C.derived(p).str; assert.ok(C.grantWish(p, 'fang')); assert.strictEqual(C.derived(p).str, s + 6); assert.strictEqual(p.orbs.length, 0);
+  assert.strictEqual(C.LILY_COUNT, 5); assert.strictEqual(new Set(C.LILIES.map((l) => l.col)).size, 5); assert.strictEqual(new Set(C.LILIES.map((l) => l.buff)).size, 5);
+  assert.strictEqual(C.restorePond(p), false); assert.strictEqual(C.addOrb(p, 'orb6'), false);
+  let d0 = C.derived(p); assert.ok(C.addOrb(p, 'orb1')); assert.strictEqual(C.derived(p).str, d0.str + 3); assert.strictEqual(C.addOrb(p, 'orb1'), false);
+  d0 = C.derived(p); assert.ok(C.addOrb(p, 'orb4')); assert.strictEqual(C.derived(p).def, d0.def + 3);
+  for (let i = 1; i <= 5; i++) C.addOrb(p, 'orb' + i); const tea = p.inventory.tea || 0;
+  assert.ok(C.restorePond(p)); assert.ok(p.flags.pondRestored); assert.strictEqual(p.orbs.length, 5); assert.strictEqual(p.inventory.tea, tea + 2);
+  assert.strictEqual(C.WISHES, undefined); assert.strictEqual(C.grantWish, undefined);
 });
 test('save round-trips and rejects junk', () => {
   const s = mem(), p = C.init(C.newPlayer()); C.gainXp(p, 100); C.addOrb(p, 'orb3'); p.area = 'forest';
@@ -40,4 +45,14 @@ test('IP: original form/item names (no golden-transformation / senzu-style names
   const names = FORMS.map((f) => f.name).join('|') + '|' + Object.values(C.ITEMS).map((i) => i.name).join('|');
   for (const b of ['Golden', 'Super', 'Saiyan', 'Spark', 'Senzu', 'Orb']) assert.ok(!names.includes(b), b);
   for (const f of FORMS.slice(1)) assert.ok(!/^#ff[c-e]/.test(f.pal.base), 'no golden coat: ' + f.name);
+});
+
+test('old saves migrate: legacy orb6/orb7 dropped, wished -> pondRestored, old ids still load', () => {
+  const old = C.newPlayer(); old.orbs = ['orb1', 'orb3', 'orb6', 'orb7']; old.flags.wished = true;
+  const p = C.deserialize(JSON.stringify({ v: 1, p: old })); assert.deepStrictEqual(p.orbs, ['orb1', 'orb3']); assert.ok(p.flags.pondRestored);
+});
+test('IP: no Pepe / wish-granter / beam names in user-facing data', async () => {
+  const K = await import('../src/kibble.js'); const all = JSON.stringify([C.ITEMS, C.LILIES, K.COSMETICS, FORMS.map((f) => f.name)]);
+  for (const b of ['Pepe', 'Wish', 'Lightning', 'Seven', 'Kame', 'Power Level', 'Scouter', 'Saiyan']) assert.ok(!all.includes(b), b);
+  const cfg = await import('../src/config.js'); assert.strictEqual(cfg.GAME_TITLE, 'PepeNugs');
 });

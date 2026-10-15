@@ -1,4 +1,4 @@
-// PepeBallz: Cates Fury. Vanilla JS canvas action RPG. Original IP.
+// Vanilla JS canvas action RPG. Original IP. Display title comes from config.js (GAME_TITLE).
 import * as C from './core.js';
 import * as K from './kibble.js';
 import { Audio8 } from './audio.js';
@@ -7,6 +7,8 @@ import { buildWorld, huntSpots, TILE } from './world.js';
 import { shibaSprite } from './inu/sprite.js';
 import { heroFrame, STAGES, FORM_W, FORM_H } from './forms.js';
 import { drawText, measure } from './font.js';
+import { GAME_TITLE, GAME_SUBTITLE, GAME_FULL_TITLE } from './config.js';
+document.title = GAME_FULL_TITLE;
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const A = buildArt(), W = buildWorld();
@@ -103,7 +105,7 @@ function enterArea(id, tx, ty) {
   if (G.mode === 'story') { P().area = id; saveGame(true); }
 }
 function newGame() { G.mode = 'story'; G.p = C.init(C.newPlayer()); pl.stage = 0; Object.assign(pl, { inv: 0, dir: 0 }); enterArea('village', 20.5, 18); G.state = 'play';
-  say([['Elder Hachi', 'Shiba! Wake up, pup. Something pink and hungry crawled down from Fang Peak last night.'], ['Elder Hachi', 'Come see me by the Wish altar, north of the square.']]); }
+  say([['Elder Hachi', 'Shiba! Wake up, pup. Something pink and hungry crawled down from Fang Peak last night.'], ['Elder Hachi', 'Come see me by the old pond basin, north of the square.']]); }
 function continueGame() { const p = C.load(STORE); if (!p) return newGame(); G.mode = 'story'; G.p = p; enterArea(p.area, p.x / TILE, p.y / TILE); G.state = 'play'; toast('Welcome back, Shiba'); }
 
 // ---------------- dialog (typewriter) ----------------
@@ -130,11 +132,11 @@ function updateMenu(dt) {
 function pauseMenu() {
   openMenu({ title: 'Menu', items: () => [
     { label: 'Items', act: itemsMenu }, { label: `Stats${P().points ? ` (+${P().points})` : ''}`, act: statsMenu },
-    { label: 'Wish Network', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
+    { label: 'Pond Network', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
     { label: 'Sound: toggle', act: () => toast(Audio8.toggleMute() ? 'Muted' : 'Sound on') }, { label: 'Close', act: closeMenu } ] });
 }
 function itemsMenu() {
-  openMenu({ title: 'Items', info: () => [`HP ${Math.ceil(P().hp)}/${D().maxHp}   Energy ${Math.floor(P().energy)}/${D().maxEnergy}`, `Bones ${P().bones}   Wish Lilies ${P().orbs.length}/7`],
+  openMenu({ title: 'Items', info: () => [`HP ${Math.ceil(P().hp)}/${D().maxHp}   Energy ${Math.floor(P().energy)}/${D().maxEnergy}`, `Bones ${P().bones}   Pond Lilies ${P().orbs.length}/${C.LILY_COUNT}`, ...C.LILIES.filter((l) => P().orbs.includes(l.id)).map((l) => `${l.name}: ${l.buff}`)],
     items: () => { const ks = Object.keys(P().inventory); return ks.length ? ks.map((k) => ({ label: `${C.ITEMS[k].name} x${P().inventory[k]}`, sub: C.ITEMS[k].desc,
       act: () => { if (C.useItem(P(), k)) { Audio8.sfx('pickup'); burst(pl.x, pl.y - 12, '#7dff8a', 12); toast(`Used ${C.ITEMS[k].name}`); } else toast(C.ITEMS[k].passive ? 'Always active' : 'Already full'); } })) : [{ label: '(empty)' }]; } });
 }
@@ -165,17 +167,17 @@ function updateNPCs(dt) {
 // ---------------- NPC talk ----------------
 const TALK = {
   elder: () => { const f = P().flags;
-    if (!f.metElder) return say([['Elder Hachi', 'Long ago, Pepe the Wish Frog scattered seven Wish Lilies across our ponds and hills.'], ['Elder Hachi', 'Now a cat-blob called Cate is gobbling everything on Fang Peak, getting bigger with every bite.'], ['Elder Hachi', 'Take this lily. Find the rest in Whisker Woods and on Fang Peak, then bring all seven to this altar.']], () => { f.metElder = true; giveOrb(1); });
-    if (P().orbs.length >= 7) return say([['Elder Hachi', 'Seven lilies! Stand at the altar and call for Pepe.']]);
-    say([['Elder Hachi', `You hold ${P().orbs.length} of 7 Wish Lilies. East to the woods, north to the peak.`]]); },
-  akita: () => say([['Akita Ren', 'Feel that hum in your fur? That is Unleash. Press Q or the ▲ button and let your coat glow.'], ['Akita Ren', 'You hit harder and take less, but it burns energy fast. Hold C to charge back up.']]),
-  kai: () => say([['Kai', 'Tap J three times for a full combo. The third hit sends foes flying.'], ['Kai', 'K fires a Howl Blast. Fire it right after charging for a big one. Space dashes through attacks.']]),
+    if (!f.metElder) return say([['Elder Hachi', 'Our village pond has run dry since Cate stomped down from Fang Peak. Its five Pond Lilies blew away across the land.'], ['Elder Hachi', 'Each lily is a different colour, and each one makes whoever carries it a little stronger.'], ['Elder Hachi', 'Take this Rose Lily. Find the other four in the village, Whisker Woods and on Fang Peak, then bring them to the basin to restore the pond.']], () => { f.metElder = true; giveOrb(1); });
+    if (P().orbs.length >= C.LILY_COUNT) return say([['Elder Hachi', 'All five lilies! Set them in the basin and the pond will fill again.']]);
+    say([['Elder Hachi', `You carry ${P().orbs.length} of ${C.LILY_COUNT} Pond Lilies. East to the woods, north to the peak.`]]); },
+  akita: () => say([['Akita Ren', 'Feel that hum in your fur? That is Unleash. Press Q or the ▲ button and let your coat glow.'], ['Akita Ren', 'You hit harder and take less, but it burns energy fast. Hold C to rest and catch your breath.']]),
+  kai: () => say([['Kai', 'Tap J three times for a full combo. The third hit sends foes flying.'], ['Kai', 'K lets out a Howl Wave. Howl right after resting for a big one. Space dashes through attacks.']]),
   merchant: () => say([['Biscuit Bram', 'Fresh biscuits! Bones only. Pink blobs drop them when you bonk them.']], shopMenu),
   pup: () => say([['Pip', 'When I grow up I want to Unleash too! My tail already glows a little. Probably.']]),
-  rin: () => { const f = P().flags; const lines = [['Rin', 'I built a Wish Network terminal! Weekly lily hunts, a Cate boss rush, leaderboards...'], ['Rin', 'It runs on simulated KIBBLE for now. Prizes go by rank, never by luck, and entry is free.']];
+  rin: () => { const f = P().flags; const lines = [['Rin', 'I built a Pond Network terminal! Weekly lily hunts, a Cate boss rush, leaderboards...'], ['Rin', 'It runs on simulated KIBBLE for now. Prizes go by rank, never by luck, and entry is free.']];
     if (!f.rinGift) { lines.push(['Rin', 'Here, take some Lily Tea for the road.']); return say(lines, () => { f.rinGift = true; C.addItem(P(), 'tea', 2); Audio8.sfx('pickup'); toast('Got Lily Tea x2'); networkMenu(); }); }
     say(lines, networkMenu); },
-  tomo: () => say([['Old Tomo', 'My grandpa swore he saw Pepe once. Bigger than a house. Smug as anything.'], ['Old Tomo', 'Said the frog grants one wish, then naps for a year.']]),
+  tomo: () => say([['Old Tomo', 'When the pond was full, an old toad called Pondo kept it clean. Grumpy, warty, kind.'], ['Old Tomo', 'Fill it again and maybe he will come home.']]),
   shiro: () => say([['Scout Shiro', 'Careful. Those pink kittens wander back to Cate, and a good cuddle heals her right up.'], ['Scout Shiro', 'Thin them out before you face her. The peak is north.']]),
   aki: () => say([['Ranger Aki', P().flags.cateDown ? 'You beat her! Though... that blob left a trail heading somewhere bigger.' : 'Cate is up at the summit. Watch for her pounce: she crouches first. Dash through it!']]),
 };
@@ -187,19 +189,19 @@ function tryInteract() {
 }
 function altar() {
   const have = G.mode === 'hunt' ? G.hunt.got.length : P().orbs.length;
-  if (have >= 7) return startWish();
-  say([['Wish altar', `Seven frog-shaped hollows. ${have} of 7 Wish Lilies ${G.mode === 'hunt' ? '(weekly hunt lilies)' : ''} glow in your pack.`]]);
+  if (have >= C.LILY_COUNT) return startWish();
+  say([['Pond basin', `A dry stone basin with five lily-shaped hollows. ${have} of ${C.LILY_COUNT} Pond Lilies ${G.mode === 'hunt' ? '(weekly hunt lilies)' : ''} in your pack.`]]);
 }
-function giveOrb(n) { if (C.addOrb(P(), 'orb' + n)) { Audio8.sfx('orb'); G.banner = { text: `Wish Lily ${n} found! (${P().orbs.length}/7)`, t: 2.5 }; burst(pl.x, pl.y - 16, A.orbs ? '#9effa0' : '#fff', 24); } }
+function giveOrb(n) { const L = C.lily('orb' + n); if (C.addOrb(P(), 'orb' + n)) { Audio8.sfx('orb'); G.banner = { text: `${L.name}! ${L.buff} (${P().orbs.length}/${C.LILY_COUNT})`, t: 2.5 }; burst(pl.x, pl.y - 16, A.orbs ? '#9effa0' : '#fff', 24); } }
 
 // ---------------- Unleash transformation cutscene ----------------
 G.craters = [];
 function startTransform(stage) { G.cut = { t: 0, stage, flashed: false }; G.state = 'cut'; pl.dir = 0; pl.atk = 0; pl.dash = 0; pl.charge = false; Audio8.sfx('roar'); }
 function updateCut(dt) {
-  const c = G.cut; c.t += dt; G.shake = Math.max(G.shake, c.flashed ? 0 : Math.min(0.5, c.t * 0.55));
-  if (!c.flashed && Math.random() < 0.6 + c.t) { const a = Math.random() * 6.28, r = 16 + Math.random() * 30; G.parts.push({ x: pl.x + Math.cos(a) * r, y: pl.y + Math.sin(a) * r * 0.4, vx: 0, vy: -30 - Math.random() * 90, g: 60, life: 0.8, col: Math.random() < 0.5 ? '#8a7e6e' : '#5a4a3a', s: 1 + (Math.random() * 2 | 0) }); }
-  if (!c.flashed && Math.random() < 0.5) { const a = Math.random() * 6.28; G.parts.push({ x: pl.x + Math.cos(a) * 34, y: pl.y - 14 + Math.sin(a) * 26, vx: -Math.cos(a) * 80, vy: -Math.sin(a) * 70, life: 0.4, col: STAGES[c.stage].aura, s: 1 }); }
-  if (!c.flashed && c.t >= 1.0) { c.flashed = true; pl.stage = c.stage; P().energy = Math.max(0, P().energy - 10); G.flash = 1; G.shake = 0.6; G.craters.push({ x: pl.x, y: pl.y, t: 0, r: 22 + c.stage * 6 });
+  const c = G.cut; c.t += dt;
+  if (!c.flashed && Math.random() < 0.35) { const a = Math.random() * 6.28; G.parts.push({ x: pl.x + Math.cos(a) * 18, y: pl.y - 6 + Math.sin(a) * 6, vx: Math.cos(a) * 20, vy: -20 - Math.random() * 25, life: 0.9, col: Math.random() < 0.5 ? '#9ad070' : '#e8f2c8', s: 1 }); } // drifting leaves
+
+  if (!c.flashed && c.t >= 1.0) { c.flashed = true; pl.stage = c.stage; P().energy = Math.max(0, P().energy - 10); G.flash = 0.5; G.shake = 0.15;
     for (let i = 0; i < 40; i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 140; G.parts.push({ x: pl.x, y: pl.y - 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5 - 60, g: 260, life: 0.9, col: i % 3 ? '#7a6a58' : '#bfb2a0', s: 1 + (Math.random() * 3 | 0) }); }
     burst(pl.x, pl.y - 16, STAGES[c.stage].aura, 40, 150); G.banner = { text: STAGES[c.stage].name.toUpperCase() + '!', t: 1.6 }; }
   if (c.t >= 1.75) { G.state = 'play'; G.cut = null; }
@@ -209,7 +211,7 @@ function updateCut(dt) {
 function burst(x, y, col, n = 10, sp = 60) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, v = sp * (0.3 + Math.random()); G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4 + Math.random() * 0.4, col, s: 1 + (Math.random() * 2 | 0) }); } }
 const float = (x, y, text, col = '#fff') => G.floats.push({ x, y, text: String(text), col, t: 0.9 });
 function auraColor() { const c = K.COSMETICS[P().cosmetics.aura]; return (c && (!c.forms || c.forms.includes(Math.max(1, pl.stage))) && c.color) || STAGES[Math.max(1, pl.stage)].aura; }
-function boltColor() { const c = K.COSMETICS[P()?.cosmetics?.bolt]; return c?.color || '#7fd0ff'; } // holder cosmetics tint the aura only, never the fur
+function boltColor() { const c = K.COSMETICS[P()?.cosmetics?.bolt]; return c?.color || '#e8ff9a'; } // holder cosmetics tint the aura only, never the fur
 function beamColor() { const c = K.COSMETICS[P().cosmetics.beam]; return c?.color === 'rainbow' ? `hsl(${(G.t * 400) % 360},100%,65%)` : c?.color || '#7ff0ff'; }
 function hurtPlayer(raw, fromX, fromY) {
   if (pl.inv > 0 || pl.dash > 0 || G.state !== 'play') return;
@@ -257,7 +259,7 @@ function updatePlayer(dt) {
   if (pressed.atk && !pl.charge) { if (pl.atk <= 0 && !tryInteract()) { pl.combo = pl.comboT > 0 ? (pl.combo + 1) % 3 : 0; pl.atk = pl.combo === 2 ? 0.3 : 0.2; pl.hitDone = false; pl.comboT = pl.atk + 0.35; Audio8.sfx('swing'); } }
   if (pressed.blast && !pl.charge && pl.blastCD <= 0) { const cost = 14; if (p.energy >= cost) { p.energy -= cost; const charged = pl.chargeT > 0; pl.blastCD = 0.35; const [fx, fy] = DV[pl.dir];
       G.shots.push({ x: pl.x + fx * 10, y: pl.y - 12 + fy * 6, vx: fx * 240, vy: fy * 240, r: charged ? 7 : 4, dmg: C.attackDamage(p, 'blast', { charged, stage: pl.stage }), mine: true, t: 1.2, col: beamColor(), big: charged });
-      Audio8.sfx('blast'); pl.chargeT = 0; pl.beamT = 0.28; } else toast('Not enough energy (hold C to charge)'); }
+      Audio8.sfx('blast'); pl.chargeT = 0; pl.beamT = 0.28; } else toast('Not enough energy (hold C to rest)'); }
   // movement
   let spd = 78 * [1, 1.25, 1.35, 1.45][pl.stage];
   if (pl.dash > 0) { pl.dash -= dt; const [fx, fy] = DV[pl.dir]; moveBody(pl, fx * 270 * dt, fy * 270 * dt, 5, 3); if (Math.random() < 0.8) G.parts.push({ x: pl.x, y: pl.y - 10, vx: 0, vy: 0, life: 0.2, col: '#ffffff', s: 2 }); }
@@ -292,7 +294,7 @@ function updateEnemies(dt) {
   G.enemies = G.enemies.filter((e) => !e.dead);
 }
 function updateShots(dt) {
-  for (const s of G.shots) { s.x += s.vx * dt; s.y += s.vy * dt; s.t -= dt; if (s.mine && Math.random() < 0.7) G.parts.push({ x: s.x, y: s.y, vx: 0, vy: 0, life: 0.18, col: s.col, s: s.big ? 3 : 2 });
+  for (const s of G.shots) { s.x += s.vx * dt; s.y += s.vy * dt; s.t -= dt; if (s.mine && Math.random() < 0.15) G.parts.push({ x: s.x, y: s.y, vx: 0, vy: 0, life: 0.18, col: s.col, s: s.big ? 3 : 2 });
     if (solidAt(s.x, s.y + 8) && !G.area.get(Math.floor(s.x / TILE), Math.floor((s.y + 8) / TILE)).match(/[~]/)) s.t = 0;
     if (s.mine) { for (const e of G.enemies) if (!e.dead && s.t > 0 && Math.hypot(e.x - s.x, e.y - 8 - s.y) < e.T.r + s.r) { hitEnemy(e, s.dmg, Math.atan2(s.vy, s.vx), 120); s.t = 0; Audio8.sfx('hit'); }
       const b = G.boss; if (b && b.hp > 0 && b.st !== 'intro' && s.t > 0 && Math.hypot(b.x - s.x, b.y - 16 - s.y) < 22 + s.r) { hitEnemy(b, s.dmg, 0, 0, true); s.t = 0; Audio8.sfx('hit'); } }
@@ -327,7 +329,7 @@ function bossDown() {
   if (G.mode === 'rush') { b.lock = false; K.contribute(G.root, 'cate_defeats', 'you'); return finishRun(); }
   const ups = C.gainXp(P(), 150); P().bones += 60; P().flags.cateDown = true; K.contribute(G.root, 'cate_defeats', 'you'); saveNet();
   say([['Cate', 'Mrrp?! You... ruffled my perfect fur!'], ['Cate', 'Fine! I\'ll go find a comfier throne. This isn\'t over, doggy!'], ['Shiba', 'She dropped something glowing...']],
-    () => { G.boss = null; Audio8.music('mountain'); G.area.pickups.push({ key: 'orb7', kind: 'orb', n: 7, x: b.x / TILE, y: b.y / TILE }); G.banner = { text: ups ? `Cate defeated!  Lv ${P().level}` : 'Cate defeated!', t: 3 }; saveGame(true); });
+    () => { G.boss = null; Audio8.music('mountain'); if (!P().orbs.includes('orb5')) G.area.pickups.push({ key: 'orb5', kind: 'orb', n: 5, x: b.x / TILE, y: b.y / TILE }); G.banner = { text: ups ? `Cate defeated!  Lv ${P().level}` : 'Cate defeated!', t: 3 }; saveGame(true); });
 }
 
 // ---------------- pickups ----------------
@@ -338,24 +340,21 @@ function updatePickups() {
       if (it.kind === 'orb') giveOrb(it.n); else { C.addItem(p, it.id); Audio8.sfx('pickup'); toast(`Found ${C.ITEMS[it.id].name}`); } saveGame(true); } }
   for (const d of G.drops) { d.t -= 1 / 60; if (Math.hypot(d.x - pl.x, d.y - pl.y) < 12 && G.mode === 'story') { d.t = 0; C.addItem(p, d.id); Audio8.sfx('pickup'); toast('Bone Biscuit!'); } }
   G.drops = G.drops.filter((d) => d.t > 0);
-  if (G.mode === 'hunt') for (const o of G.hunt.orbs) if (o.area === G.area.id && !G.hunt.got.includes(o.id) && Math.hypot(o.x * TILE - pl.x, o.y * TILE - pl.y) < 12) { G.hunt.got.push(o.id); K.contribute(G.root, 'hunt_orbs', 'you'); Audio8.sfx('orb'); G.banner = { text: `Hunt orb ${G.hunt.got.length}/7`, t: 2 }; }
+  if (G.mode === 'hunt') for (const o of G.hunt.orbs) if (o.area === G.area.id && !G.hunt.got.includes(o.id) && Math.hypot(o.x * TILE - pl.x, o.y * TILE - pl.y) < 12) { G.hunt.got.push(o.id); K.contribute(G.root, 'hunt_orbs', 'you'); Audio8.sfx('orb'); G.banner = { text: `Hunt lily ${G.hunt.got.length}/${C.LILY_COUNT}`, t: 2 }; }
 }
 
-// ---------------- Pepe the Wish Frog ----------------
+// ---------------- Pond restoration + Pondo the Pond Toad (no wishes, no summoning) ----------------
 function startWish() {
   const golden = G.mode === 'story' && G.net.useGolden && K.goldenOrbEligible(G.holdU || 0);
-  G.state = 'wish'; G.wish = { t: 0, phase: 'rise', golden }; if (golden) { const r = K.goldenSummon(G.root, G.holdU || 0); if (r.ok) { P().cosmetics.title = 'title_golden'; saveNet(); } } pl.x = 20 * TILE; pl.y = 9.5 * TILE; pl.dir = 1; pl.ascend = false; Audio8.music('wish'); Audio8.sfx('croak'); G.shake = 0.5;
+  G.state = 'wish'; G.wish = { t: 0, phase: 'rise', golden }; if (golden) { const r = K.goldenSummon(G.root, G.holdU || 0); if (r.ok) { P().cosmetics.title = 'title_golden'; saveNet(); } } pl.x = 20 * TILE; pl.y = 9.5 * TILE; pl.dir = 1; pl.ascend = false; Audio8.music('wish'); Audio8.sfx('croak');
 }
 function updateWish(dt) {
   const w = G.wish; w.t += dt;
   if (w.phase === 'rise' && w.t > 2.4) { w.phase = 'talk'; Audio8.sfx('croak');
-    if (G.mode === 'hunt') return say([['Pepe', 'RIBBIT. Seven hunt lilies, and quick about it too. Your time is logged on the Wish Network.']], () => { w.phase = 'leave'; w.t = 0; finishRun(); });
-    say([['Pepe', 'RIBBIT. Who dares wake the great Pepe from his nap?'], ['Pepe', 'Seven Wish Lilies... very well, little Shiba. Speak one wish, and make it a good one.']], () => {
-      w.phase = 'choose'; openMenu({ title: 'Make a wish', noBack: true, items: C.WISHES.map((x) => ({ label: x.name, sub: x.desc, act: () => {
-        C.grantWish(P(), x.id); G.menu = null; Audio8.sfx('level'); burst(pl.x, pl.y - 16, '#9effa0', 50, 120);
-        say([['Pepe', `Your wish is granted: ${x.name}! Now... nap time. The lilies drift off across the pond.`]], () => { w.phase = 'leave'; w.t = 0; P().flags.wished = true; for (let i = 1; i <= 7; i++) delete P().flags['got_orb' + i]; P().flags.got_orb1 = true; saveGame(true); });
-      } })) }); }); }
-  if (w.phase === 'leave' && w.t > 1.6) { G.state = G.state === 'wish' ? 'play' : G.state; G.wish = null; if (G.mode === 'story') { Audio8.music(G.area.music); G.banner = { text: P().flags.cateDown ? 'CHAPTER 1 CLEAR!' : 'The lilies drift off across the land...', t: 3 }; } }
+    if (G.mode === 'hunt') return say([['Pondo', 'Croak. Five hunt lilies, and quick about it too. Your time is logged on the Pond Network.']], () => { w.phase = 'leave'; w.t = 0; finishRun(); });
+    say([['Pondo', 'Croak! Water! Real water! Who filled my pond?'], ['Pondo', 'I am Pondo. I keep this pond clean. Keep those lilies, pup: their strength is yours now.'], ['Pondo', 'Here, some Lily Tea from the shallows. Now shoo, I have algae to sort.']], () => {
+      C.restorePond(P()); Audio8.sfx('level'); burst(pl.x, pl.y - 16, '#9effe0', 50, 120); toast('Pond restored! Got Lily Tea x2'); w.phase = 'leave'; w.t = 0; saveGame(true); }); }
+  if (w.phase === 'leave' && w.t > 1.6) { G.state = G.state === 'wish' ? 'play' : G.state; G.wish = null; if (G.mode === 'story') { Audio8.music(G.area.music); G.banner = { text: P().flags.cateDown ? 'CHAPTER 1 CLEAR!' : 'The pond is full again!', t: 3 }; } }
 }
 
 // ---------------- network modes (simulated) ----------------
@@ -366,7 +365,7 @@ function startRun(mode) {
   const p = STD_BUILD(); p.cosmetics = { ...(storySave?.cosmetics || G.net.cos || p.cosmetics) }; G.p = p; G.mode = mode; G.menu = null; G.state = 'play';
   G.run = { mode, t0: performance.now(), deaths: 0, week: K.weekId(Date.now()), day: K.dayId(Date.now()) };
   if (mode === 'rush') { enterArea('mountain', 20, 14); startBoss(false); }
-  else { G.hunt = { orbs: K.huntOrbs(G.run.week, huntSpots(W)), got: [] }; enterArea('village', 20.5, 9); G.banner = { text: `Weekly Wish Lily Hunt #${G.run.week}`, t: 3 }; }
+  else { G.hunt = { orbs: K.huntOrbs(G.run.week, huntSpots(W)), got: [] }; enterArea('village', 20.5, 9); G.banner = { text: `Weekly Pond Lily Hunt #${G.run.week}`, t: 3 }; }
 }
 G.startRun = startRun;
 function finishRun() {
@@ -376,7 +375,7 @@ function finishRun() {
   const key = board === 'rush' ? 'rush' : 'huntRuns'; n[key] ||= []; n[key].push({ ...row, period: board === 'rush' ? r.day : r.week }); if (n[key].length > 40) n[key].shift();
   const ranked = K.rankRuns([...K.sampleRows(board, board === 'rush' ? r.day : r.week), ...bestMine(board)]); const mine = ranked.find((x) => x.id === 'you');
   K.addPackPoints(G.root, board === 'rush' ? 'rushClear' : 'huntFinish'); if (mine.rank <= 3) K.addPackPoints(G.root, board === 'rush' ? 'rushTop3' : 'huntTop3'); saveNet();
-  setTimeout(() => { G.boss = null; openMenu({ title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, K.DEMO ? `Your rank: #${mine.rank} of ${ranked.length} (demo rivals)` : (G.posted || (K.getWallet().address ? 'Posting to the prize board…' : 'Sign in (Wish Network) to post runs to the prize board')), n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
+  setTimeout(() => { G.boss = null; openMenu({ title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, K.DEMO ? `Your rank: #${mine.rank} of ${ranked.length} (demo rivals)` : (G.posted || (K.getWallet().address ? 'Posting to the prize board…' : 'Sign in (Pond Network) to post runs to the prize board')), n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
     items: [{ label: 'View leaderboards', act: leaderboardsMenu }, { label: 'Return to story', act: () => endRun(true) }] }); }, 600);
 }
 function endRun() { G.menu = null; G.mode = 'story'; G.run = null; G.hunt = null; G.boss = null; if (storySave) { G.p = storySave; enterArea(G.p.area, G.p.x / TILE, G.p.y / TILE); G.state = 'play'; } else toTitle(); }
@@ -393,20 +392,20 @@ const SIM = () => (K.DEMO ? 'DEMO MODE (?demo=1): fake KIBBLE, nothing real' : K
 const DEMO_ONLY = (lbl) => !K.DEMO && /\(sim\)|sim allies|^SIM:|^Settle|^List \$PAWS/.test(lbl);
 function networkMenu() {
   refreshWallet();
-  openMenu({ title: 'Wish Network', info: () => [SIM(), K.getWallet().address ? `Wallet ${K.getWallet().address.slice(0, 10)}..  ${K.fmtK(G.walletBal || 0)} KIBBLE  Tier: ${tier().name}` : (K.DEMO ? 'Wallet: not connected (demo)' : 'Wallet: not signed in. Scores need a Phantom sign-in (free).')],
+  openMenu({ title: 'Pond Network', info: () => [SIM(), K.getWallet().address ? `Wallet ${K.getWallet().address.slice(0, 10)}..  ${K.fmtK(G.walletBal || 0)} KIBBLE  Tier: ${tier().name}` : (K.DEMO ? 'Wallet: not connected (demo)' : 'Wallet: not signed in. Scores need a Phantom sign-in (free).')],
     items: () => [
       { label: K.getWallet().address ? (K.DEMO ? 'Wallet: connected (DEMO)' : 'Wallet: signed in') : (K.DEMO ? 'Connect DEMO wallet' : 'Sign in with Phantom'), act: async () => { try { await K.getWallet().connect(); await refreshWallet(); toast(K.DEMO ? 'DEMO wallet connected' : 'Signed in. Runs now post to the prize board.'); } catch (e) { toast(e.message); } } },
-      { label: 'Weekly Wish Lily Hunt', sub: 'Free. Same 7 lilies for everyone this week. Fastest wins.', act: () => startRun('hunt') },
+      { label: 'Weekly Pond Lily Hunt', sub: 'Free. Same 5 lilies for everyone this week. Fastest wins.', act: () => startRun('hunt') },
       { label: 'Cate Boss Rush', sub: 'Free. Fixed build. Fastest clear wins.', act: () => startRun('rush') },
-      { label: 'Leaderboards & prize pools', act: leaderboardsMenu }, { label: 'Pepe Wish Shop (cosmetic)', act: wishShop }, { label: 'Cosmetics & holder tier', act: cosmeticsMenu },
+      { label: 'Leaderboards & prize pools', act: leaderboardsMenu }, { label: 'Pond Shop (cosmetic)', act: wishShop }, { label: 'Cosmetics & holder tier', act: cosmeticsMenu },
       { label: 'Tournament of Paws (weekly, free)', act: tourneyMenu }, { label: 'Cate Bounty Board', act: bountyMenu }, { label: 'Seasons', act: seasonMenu }, { label: 'Burn for Legends', act: burnMenu }, { label: 'Fighter Launches (stub)', act: launchMenu },
       { label: 'Pack & Kibble Cup', act: packMenu }, { label: 'Co-op Cate Raid (event stub)', act: raidMenu }, { label: 'Export cosmetics to Inu Verse (stub)', act: exportMenu }, { label: 'Back', act: closeMenu } ] });
 }
 function leaderboardsMenu() {
-  let tab = 0; const tabs = ['daily', 'weekly', 'monthly'], names = { daily: 'Daily: Cate Boss Rush', weekly: 'Weekly: Wish Lily Hunt', monthly: 'Monthly: Kibble Cup (packs)' };
+  let tab = 0; const tabs = ['daily', 'weekly', 'monthly'], names = { daily: 'Daily: Cate Boss Rush', weekly: 'Weekly: Pond Lily Hunt', monthly: 'Monthly: Kibble Cup (packs)' };
   openMenu({ title: 'Leaderboards', info: () => { const pool = tabs[tab], n = G.net; const rows = pool === 'monthly' ? cupRows().map((r) => `#${r.rank} [${r.tag}] ${r.points} pts${r.mine ? ' <you' : ''}`) : boardRows(K.POOL_BOARDS[pool]).slice(0, 6).map((r) => `#${r.rank} ${r.name.padEnd(13)} ${fmtTime(r.timeMs)} d${r.deaths}${r.id === 'you' ? ' <' : ''}`);
       if (!K.DEMO) { const b = K.serverBoards[pool] || [], me = K.getWallet().address, P = K.serverPools?.[pool];
-        return [`< ${pool.toUpperCase()}: PepeBallz runs (wallet-signed) >`, `Live pool ${P ? K.fmtK(Number(P.accruedBaseUnits)) : '0'} KIBBLE, paid to the combined top 3 of all Inu games`, 'Free entry, skill only. Score = faster clear, fewer deaths.',
+        return [`< ${pool.toUpperCase()}: ${GAME_TITLE} runs (wallet-signed) >`, `Live pool ${P ? K.fmtK(Number(P.accruedBaseUnits)) : '0'} KIBBLE, paid to the combined top 3 of all Inu games`, 'Free entry, skill only. Score = faster clear, fewer deaths.',
           ...(b.length ? b.slice(0, 6).map((e) => `#${e.rank} ${e.wallet.slice(0, 4)}..${e.wallet.slice(-4)}  ${e.score}${e.wallet === me ? ' <you' : ''}`) : ['No signed runs yet. Sign in and clear the Boss Rush or Hunt!'])]; }
       return [`< ${names[pool]} >   pool ${K.fmtK(n.pools[pool])} KIBBLE (demo)`, 'DEMO: rivals are simulated. Paid by rank: 50% / 30% / 20%.', ...rows]; },
     items: () => [{ label: `Board: ${tabs[tab]} (left/right)`, lr: (d) => (tab = (tab + d + 3) % 3), act: () => (tab = (tab + 1) % 3) },
@@ -415,21 +414,21 @@ function leaderboardsMenu() {
         toast(out.length ? `Paid ${out.map((o) => `#${o.rank} ${K.fmtK(o.amountU)}`).join(', ')}` : 'Pool is empty: buy a cosmetic to seed it', 3); } }, { label: 'Back', act: closeMenu }] });
 }
 function wishShop() {
-  openMenu({ title: 'Pepe Wish Shop', info: () => [SIM(), 'Cosmetic only. Never changes stats. Price includes the 2%:', '1% treasury, 0.25% daily / 0.5% weekly / 0.25% monthly pools.', `Treasury ${K.OWNER_WALLET.slice(0, 6)}..${K.OWNER_WALLET.slice(-4)}  Balance ${K.fmtK(G.walletBal || 0)}`],
+  openMenu({ title: 'Pond Shop', info: () => [SIM(), 'Cosmetic only. Never changes stats. Price includes the 2%:', '1% treasury, 0.25% daily / 0.5% weekly / 0.25% monthly pools.', `Treasury ${K.OWNER_WALLET.slice(0, 6)}..${K.OWNER_WALLET.slice(-4)}  Balance ${K.fmtK(G.walletBal || 0)}`],
     items: () => [...K.WISH_SHOP.map((c) => { const q = K.quote(c.id), own = G.net.owned.includes(c.id); return { label: `${c.name}  ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: own ? 'Equip it in Cosmetics' : `incl. 2% (treasury ${K.fmtK(q.owner)}, pools ${K.fmtK(q.daily)}/${K.fmtK(q.weekly)}/${K.fmtK(q.monthly)})`, disabled: own,
-      act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Wish granted: ${c.name}${K.DEMO ? ' (demo)' : ''}`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
+      act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Unlocked: ${c.name}${K.DEMO ? ' (demo)' : ''}`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
 }
 function cosmeticsMenu() {
   const kinds = ['aura', 'bolt', 'beam', 'outfit', 'title'];
   const avail = (k) => ['', ...Object.keys(K.COSMETICS).filter((id) => K.COSMETICS[id].kind === k && (G.net.owned.includes(id) || K.unlockedByTier(G.holdU || 0).includes(id)))];
-  const label = (k) => { const v = P().cosmetics[k]; return v && K.COSMETICS[v] ? K.COSMETICS[v].name : k === 'aura' ? 'Gold (default)' : k === 'beam' ? 'Cyan (default)' : k === 'bolt' ? 'Blue-white (default)' : k === 'outfit' ? 'Hoodie (default)' : 'none'; };
+  const label = (k) => { const v = P().cosmetics[k]; return v && K.COSMETICS[v] ? K.COSMETICS[v].name : k === 'aura' ? 'Gold (default)' : k === 'beam' ? 'Cyan (default)' : k === 'bolt' ? 'Fireflies (default)' : k === 'outfit' ? 'Hoodie (default)' : 'none'; };
   openMenu({ title: 'Cosmetics', info: () => [`Holder tier: ${tier().name} (holdings ${K.fmtK(G.holdU || 0)} ${K.DEMO ? 'demo ' : ''}KIBBLE)`, 'Tiers: Pup 0, Hound 1k, Alpha 10k, Shogun 100k. Cosmetic only.'],
     items: () => [...kinds.map((k) => ({ label: `${k[0].toUpperCase() + k.slice(1)}: ${label(k)}  <>`, lr: (d) => { const l = avail(k), i = Math.max(0, l.indexOf(P().cosmetics[k] || '')); P().cosmetics[k] = l[(i + d + l.length) % l.length]; G.net.cos = { ...P().cosmetics }; saveNet(); }, act: () => {} })),
-      { label: `Pepe's Golden Lily: ${K.goldenOrbEligible(G.holdU || 0) ? (G.net.useGolden ? 'ON' : 'off') : 'locked (Alpha+)'}`, sub: 'Rare cosmetic 8th lily. Summon with it for Golden Pepe + a unique title.', act: () => { if (!K.goldenOrbEligible(G.holdU || 0)) return toast('Alpha tier or higher'); G.net.useGolden = !G.net.useGolden; saveNet(); } },
+      { label: `Golden Lily: ${K.goldenOrbEligible(G.holdU || 0) ? (G.net.useGolden ? 'ON' : 'off') : 'locked (Alpha+)'}`, sub: 'Cosmetic. Restore the pond with it for a golden Pondo + a unique title.', act: () => { if (!K.goldenOrbEligible(G.holdU || 0)) return toast('Alpha tier or higher'); G.net.useGolden = !G.net.useGolden; saveNet(); } },
       { label: 'SIM: raise holdings (tier preview)', act: async () => { const w = K.getWallet(); w.s.holdU = w.s.holdU >= K.toU(100000) ? 0 : w.s.holdU < K.toU(1000) ? K.toU(1000) : w.s.holdU * 10; saveNet(); await refreshWallet(); toast(`Tier: ${tier().name}`); } }, { label: 'Back', act: closeMenu }] });
 }
 function packMenu() {
-  const TAGS = ['', 'INU', 'SHIBA', 'PEPE', 'HOWL', 'KAI'];
+  const TAGS = ['', 'INU', 'SHIBA', 'POND', 'HOWL', 'KAI'];
   openMenu({ title: 'Pack & Kibble Cup', info: () => [`Pack tag: ${G.net.pack.tag || '(none)'}   Pack points: ${G.net.pack.points}`, 'Points: hunt finish 50, top 3 +30, rush clear 20, top 3 +20, raid 15.', ...cupRows().map((r) => `#${r.rank} [${r.tag}] ${r.points}${r.mine ? ' <you' : ''}`)],
     items: () => [{ label: `Tag: ${G.net.pack.tag || 'none'}  <>`, lr: (d) => { const i = TAGS.indexOf(G.net.pack.tag); G.net.pack.tag = TAGS[(i + d + TAGS.length) % TAGS.length]; saveNet(); }, act: () => {} }, { label: 'Back', act: closeMenu }] });
 }
@@ -496,7 +495,7 @@ function launchMenu() { const q = K.listingQuote();
 function toTitle() { G.state = 'title'; G.mode = 'story'; G.menu = null; G.dialog = null; Audio8.music('title'); titleMenu(); }
 function titleMenu() {
   G.menu = null; const has = !!C.load(STORE);
-  openMenu({ title: '', titleScreen: true, noBack: true, items: () => [...(has ? [{ label: 'Continue', act: () => { G.menu = null; continueGame(); } }] : []), { label: 'New Game', act: () => { G.menu = null; newGame(); } }, { label: 'Wish Network', act: () => { G.p = G.p || C.init(C.newPlayer()); networkMenu(); } }] });
+  openMenu({ title: '', titleScreen: true, noBack: true, items: () => [...(has ? [{ label: 'Continue', act: () => { G.menu = null; continueGame(); } }] : []), { label: 'New Game', act: () => { G.menu = null; newGame(); } }, { label: 'Pond Network', act: () => { G.p = G.p || C.init(C.newPlayer()); networkMenu(); } }] });
 }
 
 // ---------------- main update ----------------
@@ -522,22 +521,20 @@ function update(dt) {
 // ---------------- render ----------------
 function heroImg() {
   const c = P().cosmetics, oc = K.COSMETICS[c.outfit], eq = oc?.equip || HERO_EQ.hoodie, face = DIRS[pl.dir];
-  const kind = G.state === 'cut' ? 'power' : pl.atk > 0 ? (pl.combo === 2 ? 'kick' : 'punch') : pl.beamT > 0 ? 'beam' : 'walk';
+  const kind = pl.atk > 0 ? (pl.combo === 2 ? 'kick' : 'punch') : 'walk'; // no power-up crouch or two-handed beam pose
   return heroFrame('golden', pl.stage, face, kind === 'walk' && pl.moving ? Math.floor(pl.walk * 9) % 4 : 0, kind, eq);
 }
-// flame-shaped pixel aura drawn behind a sprite. stage 1..3, k scales size.
+// Unleash glow: soft ripple rings on the ground at the feet + a faint coat shimmer (no flame column).
 function drawAura(cx, fy, stage, col, k = 1) {
-  const Wd = Math.round([0, 14, 18, 27][stage] * k), Ht = [0, 40, 50, 70][stage] * k, t = G.t, pulse = stage >= 2 ? 0.8 + 0.25 * Math.sin(t * 13) : 1;
-  ctx.fillStyle = col;
-  for (let pass = 0; pass < 2; pass++) { ctx.globalAlpha = (pass ? 0.3 : 0.38) * pulse; const w = pass ? Math.round(Wd * 0.5) : Wd, hh = pass ? Ht * 0.6 : Ht; if (pass) ctx.fillStyle = '#fffbe0';
-    for (let x = -w; x <= w; x++) { const n = x / (w + 1); let h = hh * Math.pow(1 - Math.abs(n), 1.1) * (0.75 + 0.25 * Math.sin(t * 15 + x * 0.8)) + hh * 0.18; if (Math.sin(t * 22 + x * 1.9) > 0.55) h += 5 * k; if (Math.abs(x) % 4 === 1 && Math.sin(t * 9 + x) > 0.2) h += 7 * k; // flame tongues
-      ctx.fillRect(Math.round(cx + x), Math.round(fy + 2 - h), 1, Math.round(h)); } }
+  ctx.strokeStyle = col; ctx.lineWidth = 1;
+  for (let i = 0; i < stage + 1; i++) { const ph = (G.t * 0.9 + i / (stage + 1)) % 1, rx = (8 + ph * (10 + stage * 4)) * k; ctx.globalAlpha = 0.55 * (1 - ph); ctx.beginPath(); ctx.ellipse(cx, fy, rx, rx * 0.32, 0, 0, 6.283); ctx.stroke(); }
   ctx.globalAlpha = 1;
 }
-function drawBolts(cx, fy, n, k = 1, tint) { // crackling blue-white lightning arcs (holder bolt skins recolour them)
+// fireflies drifting around the hero (holder 'bolt' cosmetics tint them)
+function drawBolts(cx, fy, n, k = 1, tint) {
   const bc = tint || boltColor();
-  for (let b = 0; b < n; b++) { let x = cx + (Math.random() - 0.5) * 26 * k, y = fy - 6 - Math.random() * 30 * k; const segs = 4 + (Math.random() * 3 | 0);
-    for (let i = 0; i < segs; i++) { const nx = x + (Math.random() - 0.5) * 10, ny = y + (Math.random() - 0.3) * 8; line(x, y, nx, ny, i % 2 ? bc : '#f0fbff'); x = nx; y = ny; } }
+  for (let b = 0; b < n + 1; b++) { const a = G.t * (0.8 + b * 0.23) + b * 2.1, x = cx + Math.cos(a) * 14 * k, y = fy - 16 + Math.sin(a * 1.7) * 10 * k; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(G.t * 6 + b); R(x, y, 1, 1, '#ffffff'); R(x - 1, y, 3, 1, bc); R(x, y - 1, 1, 3, bc); }
+  ctx.globalAlpha = 1;
 }
 function line(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) | 0; ctx.fillStyle = c; for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / (n || 1)), Math.round(y0 + (y1 - y0) * i / (n || 1)), 1, 1); }
 const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
@@ -573,7 +570,7 @@ function drawWorld() {
     if (crouch) text('!', b.x - ox, b.y - 70 - oy, '#ff5f6d', 14, 'center'); } });
   depth.push({ y: pl.y, f: drawHero });
   depth.sort((p, q) => p.y - q.y).forEach((d) => d.f());
-  for (const s of G.shots) { const x = Math.round(s.x - ox), y = Math.round(s.y - oy); if (s.mine) { R(x - s.r, y - s.r / 2, s.r * 2, s.r, s.col); R(x - s.r + 2, y - 1, s.r * 2 - 4, 2, '#ffffff'); R(x - s.r / 2, y - s.r, s.r, s.r * 2, s.col); } else if (s.rock) { R(x - 3, y - 3, 6, 6, '#38342f'); R(x - 2, y - 2, 4, 4, '#a39e96'); } else { R(x - 4, y - 3, 8, 6, '#7a1f4f'); R(x - 3, y - 4, 6, 8, '#7a1f4f'); R(x - 3, y - 2, 6, 4, s.col); R(x - 2, y - 2, 2, 2, '#fff'); } }
+  for (const s of G.shots) { const x = Math.round(s.x - ox), y = Math.round(s.y - oy); if (s.mine) { const a = Math.atan2(s.vy, s.vx); ctx.strokeStyle = s.col; ctx.lineWidth = 1; for (let k = 0; k < 3; k++) { ctx.globalAlpha = 1 - k * 0.3; ctx.beginPath(); ctx.arc(x - Math.cos(a) * k * 4, y - Math.sin(a) * k * 4, s.r + 2 - k, a - 0.9, a + 0.9); ctx.stroke(); } ctx.globalAlpha = 1; } else if (s.rock) { R(x - 3, y - 3, 6, 6, '#38342f'); R(x - 2, y - 2, 4, 4, '#a39e96'); } else { R(x - 4, y - 3, 8, 6, '#7a1f4f'); R(x - 3, y - 4, 6, 8, '#7a1f4f'); R(x - 3, y - 2, 6, 4, s.col); R(x - 2, y - 2, 2, 2, '#fff'); } }
   for (const p of G.parts) { ctx.globalAlpha = Math.min(1, p.life * 3); R(p.x - ox, p.y - oy, p.s, p.s, p.col); } ctx.globalAlpha = 1;
   for (const f of G.floats) text(f.text, Math.round(f.x - ox), Math.round(f.y - oy), f.col, 8, 'center');
   if (G.state === 'wish') drawWish(ox, oy);
@@ -596,15 +593,18 @@ function drawHero() {
     ctx.fillStyle = st ? '#fff3a8' : '#ffffff'; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.28 + G.t * 20, r = 2 + el * (pl.combo === 2 ? 9 : 6); ctx.fillRect(Math.round(hx + Math.cos(a) * r), Math.round(hy + Math.sin(a) * r * 0.7), 2, 1); } }
   const t = P().cosmetics.title && K.COSMETICS[P().cosmetics.title]; if (t) text(t.name, feetX, y - 2, '#ffe066', 6, 'center');
 }
-let _gp = null; function goldPepe() { if (_gp) return _gp; _gp = A.pepe.map((src) => { const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d'); g.drawImage(src, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
-  for (let i = 0; i < d.data.length; i += 4) { const [r, gg, b] = [d.data[i], d.data[i + 1], d.data[i + 2]]; if (gg > r + 15 && gg > b + 15) { const l = gg / 255; d.data[i] = Math.min(255, 255 * (0.55 + l * 0.6)); d.data[i + 1] = Math.min(255, 200 * (0.4 + l * 0.7)); d.data[i + 2] = 40 * l; } } g.putImageData(d, 0, 0); return c; }); return _gp; }
+let _gt = null; function goldToad() { if (_gt) return _gt; _gt = A.toad.map((src) => { const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d'); g.drawImage(src, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < d.data.length; i += 4) { const [r, gg, b] = [d.data[i], d.data[i + 1], d.data[i + 2]]; if (r > b + 30 && gg > b + 20) { const l = (r + gg) / 510; d.data[i] = Math.min(255, 255 * (0.6 + l * 0.6)); d.data[i + 1] = Math.min(255, 210 * (0.45 + l * 0.7)); d.data[i + 2] = 50 * l; } } g.putImageData(d, 0, 0); return c; }); return _gt; }
+// Pond restoration: the dry basin fills with water, the 5 lilies settle on it, and Pondo hops in from the side.
 function drawWish(ox, oy) {
-  const w = G.wish, k = Math.min(1, w.t / 1.2); ctx.fillStyle = `rgba(10,20,40,${0.6 * (w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.6) : k)})`; ctx.fillRect(0, 0, VW, VH);
-  if (w.phase === 'rise' && Math.random() < 0.08) { R(0, 0, VW, VH, 'rgba(200,255,200,.4)'); G.shake = 0.15; }
-  const rise = w.phase === 'rise' ? Math.min(1, Math.max(0, (w.t - 0.8) / 1.4)) : w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.4) : 1; if (rise <= 0) return;
-  const img = (w.golden ? goldPepe() : A.pepe)[Math.floor(G.t * 0.7) % 4 === 0 ? 1 : 0], px = 20 * TILE - 60 - ox, py = 2 * TILE + 40 - oy - Math.round(rise * 40);
-  ctx.globalAlpha = rise; for (let i = 0; i < 7; i++) { const a = G.t * 1.5 + i / 7 * 6.28; ctx.drawImage(A.orbs[i], Math.round(20 * TILE - 7 + Math.cos(a) * 70 - ox), Math.round(py + 50 + Math.sin(a) * 22)); }
-  ctx.drawImage(img, Math.round(px), Math.round(py)); ctx.globalAlpha = 1;
+  const w = G.wish, fill = w.phase === 'rise' ? Math.min(1, w.t / 1.6) : 1, fade = w.phase === 'leave' ? Math.max(0, 1 - w.t / 1.6) : 1;
+  const bx = 20 * TILE - ox, by = 5.6 * TILE - oy;
+  ctx.globalAlpha = 0.85 * fade; ctx.fillStyle = '#3b8bd4'; ctx.beginPath(); ctx.ellipse(bx, by, 64 * fill, 24 * fill, 0, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#9fd8ff'; for (let i = 0; i < 3; i++) { const ph = (G.t * 0.5 + i / 3) % 1; ctx.globalAlpha = 0.6 * (1 - ph) * fade * fill; ctx.beginPath(); ctx.ellipse(bx, by, 64 * fill * ph, 24 * fill * ph, 0, 0, 6.283); ctx.stroke(); }
+  ctx.globalAlpha = fade; const N = C.LILY_COUNT; for (let i = 0; i < N; i++) { const a = i / N * 6.283 + G.t * 0.2, r = 46 * fill; ctx.drawImage(A.orbs[i], Math.round(bx - 7 + Math.cos(a) * r), Math.round(by - 9 + Math.sin(a) * r * 0.36)); }
+  const hop = w.phase === 'rise' ? Math.max(0, (w.t - 1.4) / 1.0) : 1; if (hop <= 0) { ctx.globalAlpha = 1; return; }
+  const img = (w.golden ? goldToad() : A.toad)[Math.floor(G.t * 0.7) % 4 === 0 ? 1 : 0], k = Math.min(1, hop), tx = bx + 150 * (1 - k) - 60, ty = by - 72 - Math.abs(Math.sin(k * Math.PI * 2)) * 18 * (1 - k);
+  ctx.drawImage(img, Math.round(tx), Math.round(ty)); ctx.globalAlpha = 1;
 }
 let _rxT = -1, _rx = 0;
 function hudRightInset() { // keep orbs/bones/timer clear of the DOM menu button in landscape touch
@@ -618,8 +618,8 @@ function drawHUD() {
   const bar = (y, v, max, c1, c2, label) => { R(bx + 32, y, 80, 7, '#1a1420'); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 5, c1); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 1, c2); text(label, bx + 6, y - 1, '#fff', 7); };
   bar(by + 15, p.hp, d.maxHp, '#ff5f6d', '#ffb0b8', 'HP'); bar(by + 24, p.energy, d.maxEnergy, pl.ascend ? '#ffe066' : '#5cc8ff', '#ffffff', pl.stage ? 'A' + pl.stage : 'EN');
   R(bx + 33, by + 12, Math.round(78 * p.xp / C.xpToNext(p.level)), 1, '#9effa0');
-  if (G.mode === 'hunt') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = i < G.hunt.got.length ? 1 : 0.25; ctx.drawImage(A.orbs[i], VW - 108 - rx + i * 14, 8); } ctx.globalAlpha = 1; }
-  else if (G.mode === 'story') { for (let i = 0; i < 7; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 108 - rx + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8 - rx, 24, '#fff4e0', 7, 'right'); }
+  if (G.mode === 'hunt') { for (let i = 0; i < C.LILY_COUNT; i++) { ctx.globalAlpha = i < G.hunt.got.length ? 1 : 0.25; ctx.drawImage(A.orbs[i], VW - 80 - rx + i * 14, 8); } ctx.globalAlpha = 1; }
+  else if (G.mode === 'story') { for (let i = 0; i < C.LILY_COUNT; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 80 - rx + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8 - rx, 24, '#fff4e0', 7, 'right'); }
   if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : G.mode === 'tourney' ? 'TOURNEY' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8 - rx, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
   const b = G.boss; if (b && b.st !== 'intro' && b.st !== 'down') { const w = Math.min(220, VW - 40), x = (VW - w) / 2, y = VH - 18; R(x - 1, y - 1, w + 2, 9, '#1a1420'); R(x, y, Math.round(w * b.hp / b.max), 7, '#ff7bd5'); R(x, y, Math.round(w * b.hp / b.max), 2, '#ffd0e6'); text('CATE', x, y - 10, '#ffd0e6', 8); }
 }
@@ -634,7 +634,7 @@ function drawMenu() {
   if (m.titleScreen) { const w = 130, x = Math.floor((VW - w) / 2), y = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)); items.forEach((it, i) => { const sel = i === m.sel; text((sel ? '> ' : '  ') + it.label, x + 10, y + i * 13, sel ? '#ffe066' : '#fff', 9); }); return; }
   const w = Math.min(VW - 12, 330), lineH = 12, h = 22 + info.length * 10 + items.length * lineH + (items[m.sel]?.sub ? 20 : 6), x = Math.floor((VW - w) / 2), y = Math.max(4, Math.floor((VH - h) / 2));
   ctx.fillStyle = 'rgba(10,8,20,.55)'; ctx.fillRect(0, 0, VW, VH); panel(x, y, w, h); text(m.title, x + 10, y + 7, '#ffe066', 9);
-  if (G.shiba && /Wish Network|clear!|complete!/.test(m.title)) { G.shibaC ||= G.shiba.canvas(1); const c = G.shibaC; ctx.drawImage(c, x + w - c.width - 6, y + 4); text(G.shiba.profile.name, x + w - 6 - c.width / 2, y + 8 + c.height, '#ffe066', 6, 'center'); } // your Inu Verse Shiba (shared profile)
+  if (G.shiba && /Pond Network|clear!|complete!/.test(m.title)) { G.shibaC ||= G.shiba.canvas(1); const c = G.shibaC; ctx.drawImage(c, x + w - c.width - 6, y + 4); text(G.shiba.profile.name, x + w - 6 - c.width / 2, y + 8 + c.height, '#ffe066', 6, 'center'); } // your Inu Verse Shiba (shared profile)
   info.forEach((l, i) => text(l, x + 10, y + 20 + i * 10, /^(DEMO|KIBBLE launching|LIVE)/.test(l) ? '#ff9ac8' : '#cfc6e6', 7));
   const iy = y + 22 + info.length * 10; items.forEach((it, i) => { const sel = i === m.sel; if (sel) R(x + 5, iy + i * lineH - 2, w - 10, lineH, '#4a4068'); text((sel ? '> ' : '  ') + it.label, x + 10, iy + i * lineH, it.disabled ? '#8a84a0' : sel ? '#ffe066' : '#fff8e8', 8); });
   const sub = items[m.sel]?.sub; if (sub) wrap(sub, w - 20, 7).slice(0, 2).forEach((l, i) => text(l, x + 10, iy + items.length * lineH + 3 + i * 9, '#9effa0', 7));
@@ -644,14 +644,14 @@ function drawTitle() {
   const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#1c1440'); g.addColorStop(0.6, '#6a2c70'); g.addColorStop(1, '#f08a5d'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   for (const [sx, sy, s] of stars) if ((G.t * 2 + sx * 10) % 3 > 0.4) R(sx * VW, sy * VH * 0.6, s ? 1 : 2, s ? 1 : 2, '#fff8e8');
   ctx.fillStyle = '#3a1f4a'; ctx.beginPath(); ctx.moveTo(0, VH); for (let x = 0; x <= VW; x += 8) ctx.lineTo(x, VH * 0.72 - Math.abs(Math.sin(x / 47)) * 40 - (x > VW * 0.4 && x < VW * 0.6 ? 30 - Math.abs(x - VW / 2) / 3 : 0)); ctx.lineTo(VW, VH); ctx.fill();
-  const pepe = A.pepe[Math.floor(G.t) % 5 === 0 ? 1 : 0]; ctx.globalAlpha = 0.9; ctx.drawImage(pepe, Math.round(VW / 2 - 60), Math.round(VH * 0.06 + Math.sin(G.t * 1.5) * 3)); ctx.globalAlpha = 1;
+  const toad = A.toad[Math.floor(G.t) % 5 === 0 ? 1 : 0]; ctx.globalAlpha = 0.9; ctx.drawImage(toad, Math.round(VW / 2 - 60), Math.round(VH * 0.06 - 14 + Math.sin(G.t * 1.5) * 3)); ctx.globalAlpha = 1;
   const ty = Math.round(VH * 0.06 + 70); const sz = Math.min(34, Math.floor(VW / 8));
-  const ls = Math.max(2, Math.min(5, Math.floor(VW / 60))); drawText(ctx, 'PEPEBALLZ', VW / 2, ty, '#ffe066', ls, 'center', '#1a1420', true);
-  drawText(ctx, "CATE'S FURY", VW / 2, ty + 9 * ls + 2, '#ff8fc8', Math.max(1, ls - 2), 'center', '#1a1420', true); void sz; G.titleMenuY = ty + 9 * ls + 9 * Math.max(1, ls - 2) + 10;
+  const ls = Math.max(2, Math.min(5, Math.floor(VW / 60))); drawText(ctx, GAME_TITLE.toUpperCase(), VW / 2, ty, '#ffe066', ls, 'center', '#1a1420', true);
+  drawText(ctx, GAME_SUBTITLE.toUpperCase(), VW / 2, ty + 9 * ls + 2, '#ff8fc8', Math.max(1, ls - 2), 'center', '#1a1420', true); void sz; G.titleMenuY = ty + 9 * ls + 9 * Math.max(1, ls - 2) + 10;
   const hero = heroFrame('golden', Math.floor(G.t / 2.5) % 4, 'right', Math.floor(G.t * 8) % 4, 'walk', HERO_EQ.hoodie); { const st = Math.floor(G.t / 2.5) % 4; if (st) drawAura(Math.round(VW * 0.18) + 16, Math.round(VH * 0.8), st, STAGES[st].aura); ctx.drawImage(hero, Math.round(VW * 0.18), Math.round(VH * 0.8) - FORM_H + 2); if (st >= 2) drawBolts(Math.round(VW * 0.18) + 16, Math.round(VH * 0.8), 2); }
   const cate = A.cate[Math.floor(G.t * 4) % 2]; ctx.drawImage(cate, Math.round(VW * 0.82) - 32, Math.round(VH * 0.8) - 56);
   if (Math.floor(G.t * 2) % 2) text(document.body.classList.contains('touch') ? 'Tap to start' : 'Press J / tap to start', VW / 2, VH - 14, '#fff8e8', 7, 'center');
-  text('Original fan-made game. Wish Network features are simulated.', VW / 2, VH - 24, '#e8c8e8', 6, 'center', null);
+  text('Original game. Pond Network features are simulated in demo mode.', VW / 2, VH - 24, '#e8c8e8', 6, 'center', null);
 }
 function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
@@ -670,4 +670,4 @@ cv.addEventListener('pointerdown', (e) => { Audio8.unlock(); if (G.state === 'ti
   const r = cv.getBoundingClientRect(), gy = (e.clientY - r.top) * DPR / SCALE, y0 = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)), m = G.menu, n = (m._items || (typeof m.items === 'function' ? m.items() : m.items)).length, i = Math.floor((gy - y0 + 3) / 13);
   if (i >= 0 && i < n) m.sel = i; press('atk'); setTimeout(() => release('atk'), 50); } });
 setInterval(() => document.body.classList.toggle('title', G.state === 'title'), 150);
-G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb;
+G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb; G.LILY_COUNT = C.LILY_COUNT; G.GAME_TITLE = GAME_TITLE;

@@ -27,7 +27,7 @@ test('pool payout by rank is exact, deterministic, top-3 only', () => {
 test('weekly hunt is seeded: same week same orbs, different weeks differ', () => {
   const spots = Array.from({ length: 40 }, (_, i) => ({ area: 'forest', x: i, y: i }));
   const a = K.huntOrbs(42, spots), b = K.huntOrbs(42, spots), c = K.huntOrbs(43, spots);
-  assert.deepStrictEqual(a, b); assert.strictEqual(new Set(a.map((o) => o.x)).size, 7); assert.notDeepStrictEqual(a.map((o) => o.x), c.map((o) => o.x));
+  assert.deepStrictEqual(a, b); assert.strictEqual(a.length, 5); assert.strictEqual(new Set(a.map((o) => o.x + ',' + o.y)).size, 5); assert.notDeepStrictEqual(a.map((o) => o.x), c.map((o) => o.x));
 });
 test('tiers unlock cosmetics only; packs, cup, raid, export', () => {
   assert.strictEqual(K.tierFor(0).name, 'Pup'); assert.strictEqual(K.tierFor(K.toU(1000)).name, 'Hound'); assert.strictEqual(K.tierFor(K.toU(250000)).name, 'Shogun');

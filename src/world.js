@@ -57,7 +57,7 @@ function mountain() {
   a.exits.push({ x: 18, y: 43, w: 4, h: 1, to: 'forest', tx: 24.5, ty: 2.5 });
   a.npcs.push({ id: 'aki', human: 'aki', spark: true, x: 17, y: 39, face: 'down', name: 'Ranger Aki' });
   a.spawns.push(['golem', 10, 33], ['kitten', 12, 36], ['golem', 28, 26], ['kitten', 22, 28], ['kitten', 30, 24], ['golem', 20, 20], ['kitten', 6, 30]);
-  a.pickups.push({ key: 'orb5', kind: 'orb', n: 5, x: 5, y: 24 }, { key: 'orb6', kind: 'orb', n: 6, x: 35, y: 33 }, { key: 'm_jerky', kind: 'item', id: 'jerky', x: 34, y: 20 });
+  a.pickups.push({ key: 'm_jerky', kind: 'item', id: 'jerky', x: 34, y: 20 });
   a.boss = { x: 20, y: 7 };
   return a;
 }

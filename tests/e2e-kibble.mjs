@@ -15,8 +15,8 @@ for (let i = 0; i < 4; i++) await tap('ArrowDown'); await tap('KeyJ'); check('go
 await G(() => { const g = window.__pb; g.menu = null; g.p.energy = 999; g.p.flags.cateDown = true; }); await tap('KeyQ'); await page.waitForTimeout(1900); await tap('KeyQ'); await page.waitForTimeout(1900); await page.screenshot({ path: 'proof/kibble-02-storm-howl-skinned-aura.png' }); await tap('KeyQ');
 // 2) golden pepe
 const st0 = await G(() => JSON.stringify(window.__pb.p.stats));
-await G(() => { const g = window.__pb; for (let i = 1; i <= 7; i++) g.C.addOrb(g.p, 'orb' + i); g.enterArea('village', 20, 6.5); g.pl.dir = 1; }); await page.waitForTimeout(400); await tap('KeyJ'); await page.waitForTimeout(2600);
-await page.screenshot({ path: 'proof/kibble-03-golden-pepe.png' }); check('golden Pepe summon grants unique title', await G(() => window.__pb.wish?.golden && window.__pb.net.owned.includes('title_golden') && window.__pb.p.cosmetics.title === 'title_golden'));
+await G(() => { const g = window.__pb; for (let i = 1; i <= 5; i++) g.C.addOrb(g.p, 'orb' + i); g.enterArea('village', 20, 6.5); g.pl.dir = 1; }); await page.waitForTimeout(400); await tap('KeyJ'); await page.waitForTimeout(2600);
+await page.screenshot({ path: 'proof/kibble-03-golden-pondo.png' }); check('golden Pondo pond restoration grants unique title', await G(() => window.__pb.wish?.golden && window.__pb.net.owned.includes('title_golden') && window.__pb.p.cosmetics.title === 'title_golden'));
 check('golden summon does not change stats', st0 === await G(() => JSON.stringify(window.__pb.p.stats)));
 for (let i = 0; i < 10 && await G(() => !!window.__pb.dialog); i++) await tap('KeyJ'); await tap('KeyJ'); for (let i = 0; i < 6; i++) await tap('KeyJ'); await page.waitForTimeout(1800);
 await G(() => window.__pb.saveGame(true));

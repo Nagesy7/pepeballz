@@ -85,14 +85,13 @@ const browser = await chromium.launch();
     await tap(page, i % 4 === 3 ? 'KeyK' : 'KeyJ', 30); if (i === 8) await page.screenshot({ path: 'proof/desktop-14-cate-fight.png' }); await page.waitForTimeout(90); }
   const bs = await S(page); check('desktop: Cate form 1 defeated by real attacks', bs.boss === 0 || bs.boss === null, `boss hp ${bs.boss}`); await page.waitForTimeout(300); await skipDialog(page); await page.waitForTimeout(300);
   await page.screenshot({ path: 'proof/desktop-15-cate-down.png' });
-  // collect orbs -> Pepe wish
-  await page.evaluate(() => { const G = window.__pb; for (let i = 1; i <= 7; i++) G.C.addOrb(G.p, 'orb' + i); G.enterArea('village', 20, 6.5); G.pl.dir = 1; }); await page.waitForTimeout(400);
-  await tap(page, 'KeyJ'); await page.waitForTimeout(2600); await page.screenshot({ path: 'proof/desktop-16-pepe.png' }); check('desktop: Pepe summoned with 7 orbs', (await S(page)).state === 'wish');
-  await skipDialog(page); await page.waitForTimeout(200); check('desktop: wish menu', (await S(page)).menu === 'Make a wish'); await page.screenshot({ path: 'proof/desktop-17-wish-menu.png' });
-  await tap(page, 'ArrowDown'); const str0 = await page.evaluate(() => window.__pb.C.derived(window.__pb.p).str); await tap(page, 'KeyJ'); await page.waitForTimeout(200);
-  check('desktop: wish reward granted (Lucky Fang)', (await page.evaluate(() => window.__pb.C.derived(window.__pb.p).str)) === str0 + 6); await skipDialog(page); await page.waitForTimeout(1800);
+  // collect 5 pond lilies -> restore the pond, Pondo moves in
+  await page.evaluate(() => { const G = window.__pb; for (let i = 1; i <= 5; i++) G.C.addOrb(G.p, 'orb' + i); G.enterArea('village', 20, 6.5); G.pl.dir = 1; }); await page.waitForTimeout(400);
+  await tap(page, 'KeyJ'); await page.waitForTimeout(2800); await page.screenshot({ path: 'proof/desktop-16-pondo.png' }); check('desktop: pond restoration starts with 5 lilies', (await S(page)).state === 'wish');
+  await skipDialog(page); await page.waitForTimeout(300); check('desktop: no wish menu', (await S(page)).menu === null);
+  check('desktop: pond restored, lilies kept', await page.evaluate(() => window.__pb.p.flags.pondRestored && window.__pb.p.orbs.length === 5)); await page.waitForTimeout(1800);
   // network: shop + leaderboards + hunt
-  await tap(page, 'Enter'); await tap(page, 'ArrowDown'); await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200); check('desktop: Wish Network menu', (await S(page)).menu === 'Wish Network');
+  await tap(page, 'Enter'); await tap(page, 'ArrowDown'); await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200); check('desktop: Pond Network menu', (await S(page)).menu === 'Pond Network');
   await tap(page, 'KeyJ'); await page.waitForTimeout(200); for (let i = 0; i < 4; i++) await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200);
   const statsBefore = await page.evaluate(() => JSON.stringify(window.__pb.p.stats)); await tap(page, 'KeyJ'); await page.waitForTimeout(300); await page.screenshot({ path: 'proof/desktop-18-wish-shop.png' });
   const net = await page.evaluate(() => window.__pb.net), tst = await page.evaluate(() => window.__pb.toast?.msg || ''); check('desktop: Wish Shop (real mode, mint not set) says KIBBLE launching soon, buys nothing', net.owned.length === 0 && net.treasuryU === 0 && /launching soon/i.test(tst), tst);
@@ -135,10 +134,10 @@ async function mobile(label, device, landscape) {
   const inside = await page.evaluate(() => [...document.querySelectorAll('#stick,.b')].every((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; }));
   check(`${label}: all controls inside viewport`, inside);
   await page.touchscreen.tap(10, 10); await page.waitForTimeout(100); check(`${label}: still no scroll after touches`, (await page.evaluate(() => scrollY)) === 0);
-  if (label.includes('portrait')) { await page.evaluate(() => { const G = window.__pb; G.menu = null; for (let i = 1; i <= 7; i++) G.C.addOrb(G.p, 'orb' + i); G.enterArea('village', 20, 6.5); G.pl.dir = 1; }); await page.waitForTimeout(400);
-    await tapBtn('[data-act=atk]'); await page.waitForTimeout(2700); await page.screenshot({ path: `proof/${label}-05-pepe.png` });
+  if (label.includes('portrait')) { await page.evaluate(() => { const G = window.__pb; G.menu = null; for (let i = 1; i <= 5; i++) G.C.addOrb(G.p, 'orb' + i); G.enterArea('village', 20, 6.5); G.pl.dir = 1; }); await page.waitForTimeout(400);
+    await tapBtn('[data-act=atk]'); await page.waitForTimeout(2700); await page.screenshot({ path: `proof/${label}-05-pondo.png` });
     const fit = await page.evaluate(() => { const G = window.__pb; const left = 20 * 16 - 60 - G.cam.x; return left >= 0 && left + 120 <= Math.ceil(document.getElementById('game').width / Math.max(1, Math.floor(Math.min(document.getElementById('game').width, document.getElementById('game').height) / 230))); });
-    check(`${label}: Pepe fits on screen`, fit); }
+    check(`${label}: Pondo fits on screen`, fit); }
   check(`${label}: no page errors`, errs.length === 0, errs.slice(0, 2).join(' | ')); await ctx.close();
 }
 await mobile('iphone13-portrait', devices['iPhone 13'], false);

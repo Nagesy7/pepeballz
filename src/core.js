@@ -1,10 +1,10 @@
-// PepeBallz core rules: pure logic shared by the game and node tests (no DOM).
+// Core rules (game title lives in config.js): pure logic shared by the game and node tests (no DOM).
 export const SAVE_KEY = 'pepeballz.save.v1';
 export const ITEMS = {
   bone:  { name: 'Bone Biscuit', desc: 'Restores 40 HP', heal: 40, price: 15 },
   jerky: { name: 'Hero Jerky', desc: 'Restores 120 HP', heal: 120, price: 40 },
   tea:   { name: 'Lily Tea', desc: 'Restores 60 energy', energy: 60, price: 25 },
-  fang:  { name: 'Lucky Fang', desc: 'Wish relic: +6 STR', passive: { str: 6 } },
+  fang:  { name: 'Lucky Fang', desc: 'Pond relic: +6 STR', passive: { str: 6 } },
 };
 export const xpToNext = (level) => Math.floor(20 * Math.pow(level, 1.5));
 export function newPlayer() {
@@ -15,6 +15,7 @@ export function newPlayer() {
 export function derived(p) {
   const s = { ...p.stats };
   for (const k in p.inventory) { const it = ITEMS[k]; if (it?.passive && p.inventory[k] > 0) for (const q in it.passive) s[q] += it.passive[q]; }
+  for (const L of LILIES) if (p.orbs?.includes(L.id)) for (const q in L.passive) s[q] += L.passive[q]; // each Pond Lily is a permanent buff
   return { str: s.str, def: s.def, maxHp: 60 + s.vit * 12 + p.level * 4, maxEnergy: 60 + s.enr * 8 };
 }
 export function init(p) { const d = derived(p); p.hp = d.maxHp; p.energy = d.maxEnergy; return p; }
@@ -58,24 +59,30 @@ export function useItem(p, id) {
   if (--p.inventory[id] <= 0) delete p.inventory[id];
   return true;
 }
-export function addOrb(p, id) { if (p.orbs.includes(id)) return false; p.orbs.push(id); return true; }
-export const WISHES = [
-  { id: 'power', name: 'Power of the Pack', desc: '+2 levels' },
-  { id: 'fang', name: 'Lucky Fang', desc: 'Relic: +6 STR' },
-  { id: 'feast', name: 'Endless Feast', desc: '5 Hero Jerky + 3 Lily Tea' },
+// Pond Lilies: 5 different colours, each a distinct permanent buff. Ids keep the old 'orb1..5' save keys.
+export const LILY_COUNT = 5;
+export const LILIES = [
+  { id: 'orb1', name: 'Rose Lily', col: '#ff6b8a', buff: '+3 STR', passive: { str: 3 } },
+  { id: 'orb2', name: 'Sun Lily', col: '#ffc83d', buff: '+3 VIT (max HP)', passive: { vit: 3 } },
+  { id: 'orb3', name: 'Sky Lily', col: '#5cc8ff', buff: '+3 ENR (max energy)', passive: { enr: 3 } },
+  { id: 'orb4', name: 'Moss Lily', col: '#6ee07a', buff: '+3 DEF', passive: { def: 3 } },
+  { id: 'orb5', name: 'Dusk Lily', col: '#b07bff', buff: '+2 STR +2 DEF', passive: { str: 2, def: 2 } },
 ];
-export function grantWish(p, id) {
-  if (p.orbs.length < 7) return false;
-  if (id === 'power') { for (let i = 0; i < 2; i++) gainXp(p, xpToNext(p.level) - p.xp); }
-  else if (id === 'fang') addItem(p, 'fang');
-  else if (id === 'feast') { addItem(p, 'jerky', 5); addItem(p, 'tea', 3); }
-  else return false;
-  p.orbs = []; p.wishes++; p.flags.wished = true; init(p); return true;
+export const lily = (id) => LILIES.find((l) => l.id === id);
+export function addOrb(p, id) { if (!lily(id) || p.orbs.includes(id)) return false; p.orbs.push(id); return true; }
+// Restoring the pond: needs all 5 lilies. Full heal + a thank-you gift; the lilies (and their buffs) are kept. No wishes.
+export function restorePond(p) {
+  if (LILIES.some((l) => !p.orbs.includes(l.id))) return false;
+  p.wishes = (p.wishes || 0) + 1; p.flags.pondRestored = true; addItem(p, 'tea', 2); init(p); return true;
+}
+// Old saves: drop legacy orb6/orb7, map the old 'wished' flag to pondRestored.
+export function migrate(p) {
+  p.orbs = (p.orbs || []).filter((id) => lily(id)); if (p.flags?.wished) p.flags.pondRestored = true; return p;
 }
 export const serialize = (p, extra = {}) => JSON.stringify({ v: 1, t: Date.now(), p, ...extra });
 export function deserialize(str) {
   try { const o = JSON.parse(str); if (!o || o.v !== 1 || !o.p?.stats) return null;
-    const b = newPlayer(); return { ...b, ...o.p, stats: { ...b.stats, ...o.p.stats }, cosmetics: { ...b.cosmetics, ...(o.p.cosmetics || {}) } }; }
+    const b = newPlayer(); return migrate({ ...b, ...o.p, stats: { ...b.stats, ...o.p.stats }, cosmetics: { ...b.cosmetics, ...(o.p.cosmetics || {}) } }); }
   catch { return null; }
 }
 export const save = (storage, p) => storage.setItem(SAVE_KEY, serialize(p));

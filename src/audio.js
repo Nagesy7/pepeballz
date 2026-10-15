@@ -1,4 +1,4 @@
-// Original chiptune + SFX synthesized live with WebAudio. Every melody here was composed for PepeBallz.
+// Original chiptune + SFX synthesized live with WebAudio. Every melody here was composed for this game.
 let ctx = null, master, music, sfxG, timer = null, cur = null, step = 0, nextT = 0, muted = false, noiseBuf = null;
 const NI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const hz = (n) => { const m = /^([A-G])(#?)(\d)$/.exec(n || ''); return m ? 440 * 2 ** ((NI[m[1]] + (m[2] ? 1 : 0) + (m[3] - 4) * 12 - 9) / 12) : 0; };
@@ -38,17 +38,20 @@ function tick() {
 }
 const SFX = {
   hit: (t) => tone('square', 520, t, 0.08, 0.3, sfxG, 180), hit3: (t) => tone('square', 300, t, 0.18, 0.4, sfxG, 60), swing: (t) => hiss(t, 0.07, 0.25, 2500, sfxG),
-  blast: (t) => { tone('sawtooth', 900, t, 0.3, 0.25, sfxG, 120); tone('square', 1200, t, 0.2, 0.12, sfxG, 300); }, charge: (t) => tone('triangle', 200 + Math.random() * 300, t, 0.1, 0.12, sfxG, 600),
+  blast: (t) => { tone('triangle', 520, t, 0.22, 0.25, sfxG, 780); tone('triangle', 780, t + 0.05, 0.18, 0.12, sfxG, 1040); }, // short yip-howl charge: (t) => hiss(t, 0.25, 0.05, 900, sfxG), // resting: soft breath
   dash: (t) => tone('triangle', 300, t, 0.12, 0.3, sfxG, 900), hurt: (t) => tone('square', 220, t, 0.2, 0.35, sfxG, 70),
   ascend: (t) => [0, 1, 2, 3, 4].forEach((i) => tone('square', 330 * 1.26 ** i, t + i * 0.08, 0.25, 0.2, sfxG)),
   level: (t) => [523, 659, 784, 1047].forEach((f, i) => tone('square', f, t + i * 0.09, 0.2, 0.2, sfxG)),
   pickup: (t) => { tone('square', 880, t, 0.07, 0.2, sfxG); tone('square', 1320, t + 0.07, 0.12, 0.2, sfxG); },
   orb: (t) => [784, 988, 1175, 1568, 1976].forEach((f, i) => tone('triangle', f, t + i * 0.07, 0.3, 0.25, sfxG)),
   blip: (t) => tone('square', 1400, t, 0.025, 0.05, sfxG), select: (t) => tone('square', 660, t, 0.06, 0.2, sfxG), die: (t) => tone('sawtooth', 400, t, 0.4, 0.3, sfxG, 50),
-  roar: (t) => { // rising power-up roar: detuned saw sweep + growl + noise swell, original
-    for (const [f, d] of [[70, 0], [73, 0.003], [140, 0.006]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t + d); o.frequency.exponentialRampToValueAtTime(f * 6, t + 1.0);
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3); o.connect(g); g.connect(sfxG); o.start(t); o.stop(t + 1.35); }
-    hiss(t + 0.95, 0.6, 0.5, 200, sfxG); tone('sine', 90, t + 0.95, 0.5, 0.8, sfxG, 30); },
+  roar: (t) => { // Unleash: a dog's howl (sine glide up, hold with vibrato, fall off) + soft chime. Key 'roar' kept.
+    const o = ctx.createOscillator(), g = ctx.createGain(), v = ctx.createOscillator(), vg = ctx.createGain(); o.type = 'triangle';
+    o.frequency.setValueAtTime(380, t); o.frequency.exponentialRampToValueAtTime(620, t + 0.35); o.frequency.setValueAtTime(620, t + 0.8); o.frequency.exponentialRampToValueAtTime(420, t + 1.2);
+    v.frequency.value = 6; vg.gain.value = 12; v.connect(vg); vg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.2); g.gain.setValueAtTime(0.22, t + 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.25);
+    o.connect(g); g.connect(sfxG); o.start(t); v.start(t); o.stop(t + 1.3); v.stop(t + 1.3);
+    [1047, 1319, 1568].forEach((f, i) => tone('sine', f, t + 1.0 + i * 0.06, 0.4, 0.08, sfxG)); },
   croak: (t) => { tone('sawtooth', 110, t, 0.25, 0.4, sfxG, 70); tone('sawtooth', 90, t + 0.3, 0.35, 0.4, sfxG, 60); }, meow: (t) => tone('sawtooth', 500, t, 0.35, 0.3, sfxG, 1100),
 };
 export const Audio8 = {

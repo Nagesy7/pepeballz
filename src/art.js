@@ -1,4 +1,4 @@
-// Procedural pixel art (tiles, Cate, Pepe, enemies, orbs, humans) in the Inu Verse palette: dark ink outlines, warm shading.
+// Procedural pixel art (tiles, Cate, Pondo the toad, enemies, lilies, humans) in the Inu Verse palette: dark ink outlines, warm shading.
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
 let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const px = (g, x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
@@ -64,16 +64,25 @@ function golem(f) { const [c, g] = mk(26, 29); blob(g, 5, 17 + f, 4, 5, '#8f8a84
   blob(g, 13, 16, 8, 9, '#a39e96', '#6f6a64', '#cfcac2', '#38342f'); blob(g, 13, 7, 6, 5, '#a39e96', '#6f6a64', '#cfcac2', '#38342f');
   g.fillStyle = '#6ff0ff'; g.fillRect(10, 6, 2, 2); g.fillRect(15, 6, 2, 2); g.fillStyle = '#4fc25a'; g.fillRect(11, 14, 4, 4); px(g, 11, 14, '#a6f0a0');
   g.fillStyle = '#38342f'; g.fillRect(8 - f, 25, 4, 3); g.fillRect(14 + f, 25, 4, 3); return c; }
-export const ORBCOL = ['#ff6b6b', '#ffb84d', '#ffe066', '#6ee07a', '#5cc8ff', '#8a7bff', '#ff7bd5'];
-function pepe(blink) { const [c, g] = mk(120, 100);
-  blob(g, 60, 64, 50, 32, '#4fb04a', '#357a34', '#7fd46c', '#173a18'); blob(g, 60, 75, 34, 17, '#cfe9a0', '#b4d488', null, null);
-  for (const s of [-1, 1]) { const ex = 60 + s * 24; blob(g, ex, 34, 18, 16, '#4fb04a', '#357a34', '#7fd46c', '#173a18'); blob(g, ex, 35, 12, 10, '#ffffff', '#e6eef0', null, '#173a18');
-    if (blink) { g.fillStyle = '#173a18'; g.fillRect(ex - 10, 35, 20, 2); } else { g.fillStyle = '#1c1030'; g.fillRect(ex - 4 + s * 2, 30, 7, 9); g.fillStyle = '#fff'; g.fillRect(ex - 3 + s * 2, 31, 2, 2); }
-    g.fillStyle = '#357a34'; g.fillRect(ex - 13, 23, 26, 2); }
-  for (let x = 26; x <= 94; x++) { const y = 58 + Math.round(Math.sin((x - 26) / 68 * Math.PI) * 6); g.fillStyle = '#9b2d2d'; g.fillRect(x, y, 1, 3); px(g, x, y - 1, '#173a18'); }
-  g.fillStyle = '#ff9a9a'; g.fillRect(16, 52, 8, 4); g.fillRect(96, 52, 8, 4);
-  ORBCOL.forEach((col, i) => blob(g, 30 + i * 10, 13 + Math.abs(i - 3) * 2, 3.5, 3.5, col, null, '#ffffff', '#173a18')); return c; }
-// Wish Lily n: a water-lily blossom on a pad, one petal colour per lily (no glowing ball, no star count)
+export const ORBCOL = ['#ff6b8a', '#ffc83d', '#5cc8ff', '#6ee07a', '#b07bff']; // matches core LILIES colours
+// Pondo the Pond Toad: original squat, warty, brown-olive toad. Small hooded eyes with gold irises and horizontal slit
+// pupils, heavy brow ridges, a thin straight mouth (no lips), cream throat, lily-pad cap with a pink bud.
+function toad(blink) { const [c, g] = mk(120, 90);
+  const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  for (const s of [-1, 1]) blob(g, 60 + s * 44, 76, 13, 8, '#7a6a30', '#5a4a1e', '#9a8a48', '#2a2210'); // splayed hind legs
+  blob(g, 60, 58, 46, 26, '#8c7c38', '#6a5a26', '#a89a54', '#2a2210'); // wide flat body
+  blob(g, 60, 70, 30, 12, '#e8dcae', '#d4c690', null, null); // cream throat
+  for (const [x, y, r] of [[30, 50, 3], [42, 44, 2.5], [80, 46, 3], [92, 54, 2.5], [52, 40, 2], [70, 40, 2], [24, 60, 2], [98, 62, 2]]) blob(g, x, y, r, r, '#a88a3a', '#6a5420', '#c8aa60', null); // warts
+  for (const s of [-1, 1]) { const ex = 60 + s * 26; blob(g, ex, 36, 9, 7, '#8c7c38', '#6a5a26', '#a89a54', '#2a2210'); // low eye mounds
+    blob(g, ex, 37, 6, 4.5, '#d8a830', '#b08420', '#f0d070', '#2a2210');
+    if (blink) R(ex - 6, 36, 12, 2, '#5a4a1e'); else { R(ex - 4, 36, 9, 2, '#1a1008'); px(g, ex - 3, 35, '#fff6d0'); }
+    R(ex - 9, 30, 18, 2, '#5a4a1e'); } // brow ridge
+  R(30, 58, 60, 1, '#2a2210'); px(g, 29, 57, '#2a2210'); px(g, 90, 57, '#2a2210'); // thin straight mouth
+  for (const s of [-1, 1]) { R(60 + s * 6 - 1, 47, 2, 1, '#2a2210'); } // nostrils
+  for (const s of [-1, 1]) { blob(g, 60 + s * 22, 82, 7, 4, '#9a8a48', '#6a5a26', null, '#2a2210'); for (let k = -1; k <= 1; k++) R(60 + s * 22 + k * 4, 85, 2, 2, '#9a8a48'); } // front feet
+  blob(g, 60, 20, 22, 6, '#4fa04a', '#357a34', '#7fd46c', '#173a18'); R(60, 14, 1, 7, '#173a18'); // lily-pad cap
+  blob(g, 66, 13, 4, 4, '#ff8fb5', '#e06090', '#ffd0e0', '#5a1a30'); return c; }
+// Pond Lily n: a water-lily blossom on a pad, one petal colour per lily (no glowing ball, no star count)
 function orb(n) { const [c, g] = mk(14, 14); const col = ORBCOL[n - 1];
   blob(g, 7, 10, 6, 3, '#3f8a3a', '#2a6a2a', '#6ec85a', '#123a16'); g.clearRect(7, 9, 1, 3);
   for (const [x, y] of [[4, 6], [10, 6], [7, 3], [5, 3], [9, 3]]) blob(g, x, y, 2.2, 2.2, col, null, '#ffffff', '#123a16');
@@ -96,5 +105,5 @@ const SPARK = { rin: '#3a2a6a', aki: '#6a3a1a' };
 function humans() { const o = {}; for (const k in H) { o[k] = [0, 1, 0, 2].map((st) => human(...H[k], st)); if (SPARK[k]) o[k + '_spark'] = [0, 1, 0, 2].map((st) => human(H[k][0], SPARK[k], H[k][2], H[k][3], H[k][4], st, '#5ff0ff')); } return o; }
 export function buildArt() {
   return { tiles, SOLID, TALL, tall, cate: [cate(0, 0), cate(1, 0), cate(0, 1), cate(-1, 1)], kitten: [kitten(0), kitten(1)], boar: [boar(0), boar(1)], golem: [golem(0), golem(1)],
-    pepe: [pepe(0), pepe(1)], orbs: [1, 2, 3, 4, 5, 6, 7].map(orb), bone, chest, humans: humans() };
+    toad: [toad(0), toad(1)], orbs: [1, 2, 3, 4, 5].map(orb), bone, chest, humans: humans() };
 }
