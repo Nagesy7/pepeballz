@@ -22,7 +22,7 @@ const browser = await chromium.launch();
   // talk to elder at altar (walk north)
   await page.evaluate(() => { const G = window.__pb, n = G.area.npcs.find((q) => q.id === 'elder'); n.tx = null; n.tm = 99; G.pl.x = n.x * 16; G.pl.y = n.y * 16 + 14; G.pl.dir = 1; }); await tap(page, 'KeyJ'); await page.waitForTimeout(700);
   check('desktop: NPC dialog via action key', (await S(page)).dialog); await page.screenshot({ path: 'proof/desktop-04-npc.png' }); await skipDialog(page); await page.waitForTimeout(200);
-  check('desktop: elder gives Wish Orb 1', (await S(page)).orbs === 1);
+  check('desktop: elder gives Wish Lily 1', (await S(page)).orbs === 1);
   // travel to forest by walking out the east exit
   await page.evaluate(() => { const G = window.__pb; G.pl.x = 37.5 * 16; G.pl.y = 15 * 16; }); await page.keyboard.down('ArrowRight'); await page.waitForTimeout(700); await page.keyboard.up('ArrowRight'); await page.waitForTimeout(500);
   check('desktop: east exit leads to Whisker Woods', (await S(page)).area === 'forest');
@@ -50,13 +50,13 @@ const browser = await chromium.launch();
   await stageShot(0);
   await tap(page, 'KeyQ'); await page.waitForTimeout(450); await page.screenshot({ path: 'proof/cutscene-1-powerup.png' }); await page.waitForTimeout(560); await page.screenshot({ path: 'proof/cutscene-2-flash.png' });
   await page.waitForTimeout(250); await page.screenshot({ path: 'proof/cutscene-3-crater.png' }); await page.waitForTimeout(900);
-  check('desktop: Golden Howl (stage 1)', (await page.evaluate(() => window.__pb.pl.stage)) === 1); await stageShot(1);
-  await tap(page, 'KeyQ'); await page.waitForTimeout(200); check('desktop: Storm Howl locked before Cate (press releases)', (await page.evaluate(() => window.__pb.pl.stage)) === 0);
+  check('desktop: Moon Howl (stage 1)', (await page.evaluate(() => window.__pb.pl.stage)) === 1); await stageShot(1);
+  await tap(page, 'KeyQ'); await page.waitForTimeout(200); check('desktop: Tide Howl locked before Cate (press releases)', (await page.evaluate(() => window.__pb.pl.stage)) === 0);
   await page.evaluate(() => { const G = window.__pb; G.p.flags.cateDown = true; G.p.energy = 999; }); await tap(page, 'KeyQ'); await page.waitForTimeout(1900); await tap(page, 'KeyQ'); await page.waitForTimeout(1900);
-  check('desktop: Storm Howl unlocked after Cate (stage 2)', (await page.evaluate(() => window.__pb.pl.stage)) === 2); await stageShot(2);
+  check('desktop: Tide Howl unlocked after Cate (stage 2)', (await page.evaluate(() => window.__pb.pl.stage)) === 2); await stageShot(2);
   const drain = async () => { const a = (await S(page)).en; await page.waitForTimeout(500); return a - (await S(page)).en; }; const d2 = await drain();
   await page.evaluate(() => { const G = window.__pb; G.p.level = 15; G.p.energy = 999; }); await tap(page, 'KeyQ'); await page.waitForTimeout(1900);
-  check('desktop: Primal Howl at level 15 (stage 3)', (await page.evaluate(() => window.__pb.pl.stage)) === 3); await stageShot(3); await page.screenshot({ path: 'proof/desktop-21-primal-howl.png' });
+  check('desktop: Wild Howl at level 15 (stage 3)', (await page.evaluate(() => window.__pb.pl.stage)) === 3); await stageShot(3); await page.screenshot({ path: 'proof/desktop-21-primal-howl.png' });
   const d3 = await drain(); check('desktop: higher stage drains faster', d3 > d2, `${d2.toFixed(1)} < ${d3.toFixed(1)}`);
   await page.evaluate(() => { window.__pb.pl.dir = 3; }); await tap(page, 'KeyJ', 30); await page.waitForTimeout(60); await page.screenshot({ path: 'proof/pose-punch.png' });
   await page.waitForTimeout(150); await tap(page, 'KeyJ', 30); await page.waitForTimeout(220); await tap(page, 'KeyJ', 30); await page.waitForTimeout(80); await page.screenshot({ path: 'proof/pose-kick.png' }); check('desktop: kick on 3rd combo hit', (await page.evaluate(() => window.__pb.pl.combo)) === 2);
@@ -90,7 +90,7 @@ const browser = await chromium.launch();
   await tap(page, 'KeyJ'); await page.waitForTimeout(2600); await page.screenshot({ path: 'proof/desktop-16-pepe.png' }); check('desktop: Pepe summoned with 7 orbs', (await S(page)).state === 'wish');
   await skipDialog(page); await page.waitForTimeout(200); check('desktop: wish menu', (await S(page)).menu === 'Make a wish'); await page.screenshot({ path: 'proof/desktop-17-wish-menu.png' });
   await tap(page, 'ArrowDown'); const str0 = await page.evaluate(() => window.__pb.C.derived(window.__pb.p).str); await tap(page, 'KeyJ'); await page.waitForTimeout(200);
-  check('desktop: wish reward granted (Golden Fang)', (await page.evaluate(() => window.__pb.C.derived(window.__pb.p).str)) === str0 + 6); await skipDialog(page); await page.waitForTimeout(1800);
+  check('desktop: wish reward granted (Lucky Fang)', (await page.evaluate(() => window.__pb.C.derived(window.__pb.p).str)) === str0 + 6); await skipDialog(page); await page.waitForTimeout(1800);
   // network: shop + leaderboards + hunt
   await tap(page, 'Enter'); await tap(page, 'ArrowDown'); await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200); check('desktop: Wish Network menu', (await S(page)).menu === 'Wish Network');
   await tap(page, 'KeyJ'); await page.waitForTimeout(200); for (let i = 0; i < 4; i++) await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200);

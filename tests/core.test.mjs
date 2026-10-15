@@ -34,3 +34,10 @@ test('ascend stages scale power and drain and unlock by story/level', () => {
   assert.ok(C.damageTaken(p, 40, { stage: 3 }) < C.damageTaken(p, 40, { stage: 1 }));
   assert.strictEqual(C.unlockedStage(p), 1); p.flags.cateDown = true; assert.strictEqual(C.unlockedStage(p), 2); p.level = 15; assert.strictEqual(C.unlockedStage(p), 3);
 });
+
+import { STAGES as FORMS } from '../src/forms.js';
+test('IP: original form/item names (no golden-transformation / senzu-style names)', () => {
+  const names = FORMS.map((f) => f.name).join('|') + '|' + Object.values(C.ITEMS).map((i) => i.name).join('|');
+  for (const b of ['Golden', 'Super', 'Saiyan', 'Spark', 'Senzu', 'Orb']) assert.ok(!names.includes(b), b);
+  for (const f of FORMS.slice(1)) assert.ok(!/^#ff[c-e]/.test(f.pal.base), 'no golden coat: ' + f.name);
+});

@@ -77,9 +77,9 @@ export const COSMETICS = {
   // Ascend aura skins (holders, cosmetic only). forms = which Ascend stages show it
   skin_kibble: { kind: 'aura', name: '$KIBBLE Gold Flame', color: '#f6c94c', tier: 'hound', forms: [1, 2, 3] },
   bolt_pepe: { kind: 'bolt', name: 'Pepe-Green Lightning', color: '#58ff7a', tier: 'hound', forms: [2, 3] },
-  skin_storm: { kind: 'aura', name: 'Storm Sapphire', color: '#7fb8ff', tier: 'alpha', forms: [2, 3] },
+  skin_storm: { kind: 'aura', name: 'Tide Sapphire', color: '#7fb8ff', tier: 'alpha', forms: [2, 3] },
   bolt_violet: { kind: 'bolt', name: 'Violet Crackle', color: '#d0a0ff', tier: 'alpha', forms: [2, 3] },
-  skin_primal: { kind: 'aura', name: 'Primal Ember Mane', color: '#ff6a2a', tier: 'shogun', forms: [3] },
+  skin_primal: { kind: 'aura', name: 'Wild Ember Ruff', color: '#ff6a2a', tier: 'shogun', forms: [3] },
   title_golden: { kind: 'title', name: 'Golden Wishbearer', unique: true },
   // Burn for legends (no fee: the whole amount is burned)
   legend_obsidian: { kind: 'aura', name: 'Obsidian Legend Aura', color: '#40304a', burn: 50 },
@@ -89,7 +89,7 @@ export const COSMETICS = {
   s1_cap: { kind: 'outfit', name: 'Fang Peak Climber', equip: { top: 'jacket_black', bottom: 'chinos', feet: 'sneakers_red', hat: 'cap_red' }, season: 'ch1', shop: 5 },
   s1_aura: { kind: 'aura', name: 'Catnip Pink Aura', color: '#ff8fc8', season: 'ch1', shop: 4 },
   // Pepe Wish shop exclusives (bought, never tier-gated)
-  aura_frog: { kind: 'aura', name: 'Pepe Swamp Aura', color: '#58c45a', shop: 6 }, beam_rainbow: { kind: 'beam', name: 'Seven-Orb Beam', color: 'rainbow', shop: 9.5 },
+  aura_frog: { kind: 'aura', name: 'Pepe Swamp Aura', color: '#58c45a', shop: 6 }, beam_rainbow: { kind: 'beam', name: 'Seven-Lily Wave', color: 'rainbow', shop: 9.5 },
   outfit_tux: { kind: 'outfit', name: 'Wish Night Tux', equip: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, shop: 12 },
   title_wish: { kind: 'title', name: 'Friend of Pepe', shop: 3 },
 };
@@ -190,7 +190,7 @@ export function runBracket(entrants, week, decide = simMatch) { let round = entr
 export const TOURNEY_BPS = [5000, 2500, 1250, 1250];
 export function tourneyPayout(poolU, placements) { return payoutByRank(poolU, placements.map((p, i) => ({ ...p, rank: i < 2 ? i + 1 : 3 })), TOURNEY_BPS); }
 // ---------- 4) Cate bounty board (community goals, split by contribution) ----------
-export const BOUNTIES = [{ id: 'cate_defeats', name: 'Pop 300 Cates this week', goal: 300, shareBps: 2000 }, { id: 'hunt_orbs', name: 'Find 2,000 hunt orbs', goal: 2000, shareBps: 1000 }];
+export const BOUNTIES = [{ id: 'cate_defeats', name: 'Pop 300 Cates this week', goal: 300, shareBps: 2000 }, { id: 'hunt_orbs', name: 'Find 2,000 hunt lilies', goal: 2000, shareBps: 1000 }];
 export function contribute(s, bountyId, who, n = 1) { const b = ensureNet(s); b.bounty ||= {}; const c = (b.bounty[bountyId] ||= {}); c[who] = (c[who] || 0) + n; return c[who]; }
 export const bountyTotal = (contribs) => Object.values(contribs).reduce((a, b) => a + b, 0);
 // pro-rata in millionths; remainder to the top contributor (ties by id) so the split is exact

@@ -1,14 +1,14 @@
 // Ascend forms + attack poses, built in code from the Inu Verse base grid (src/inu/sprite.js paint()).
-// Stage 0 base, 1 Golden Howl, 2 Storm Howl, 3 Primal Howl. Every stage keeps the 4-direction, 4-frame stride.
+// Stage 0 base, 1 Moon Howl, 2 Tide Howl, 3 Wild Howl (original coat-glow forms; no golden spiky hair). Every stage keeps the 4-direction, 4-frame stride.
 import { paint, GW, GH } from './inu/sprite.js';
 import { COATS } from './inu/coats.js';
 const INK = '#1a1420', PX = 5, PY = 10, W = GW + PX * 2, H = GH + PY;
 export const FORM_W = W + 2, FORM_H = H + 2;
 export const STAGES = [
   { name: 'Base', drain: 0, power: 1, guard: 1 },
-  { name: 'Golden Howl', drain: 7, power: 1.6, guard: 0.8, eye: '#3fffd0', pal: { base: '#ffd23a', dark: '#d9961a', light: '#fff3a8', ear: '#ffe07a' }, spike: ['#ffdc40', '#e09a18', '#fff8c0'], aura: '#ffd84a' },
-  { name: 'Storm Howl', drain: 12, power: 2.0, guard: 0.7, eye: '#9ff6ff', pal: { base: '#ffe45c', dark: '#e0a82a', light: '#fffbd6', ear: '#fff0a0' }, spike: ['#ffeb6a', '#e0aa30', '#ffffff'], aura: '#fff07a' },
-  { name: 'Primal Howl', drain: 18, power: 2.5, guard: 0.6, eye: '#5dff8a', pal: { base: '#ffbf1f', dark: '#c47a0c', light: '#ffe48a', ear: '#ffd060' }, spike: ['#ffc928', '#b86e08', '#fff0a0'], aura: '#ffb320', mane: ['#ffb000', '#d98200', '#ffd75a'] },
+  { name: 'Moon Howl', drain: 7, power: 1.6, guard: 0.8, eye: '#ffe6ff', pal: { base: '#c8c4e8', dark: '#8a84b8', light: '#f2f0ff', ear: '#e0dcf8' }, spike: ['#d8d4f4', '#8a84b8', '#ffffff'], aura: '#b8b0ff' },
+  { name: 'Tide Howl', drain: 12, power: 2.0, guard: 0.7, eye: '#fff6c0', pal: { base: '#5cc8c0', dark: '#2a8a8a', light: '#c8f6ee', ear: '#90e0d8' }, spike: ['#7ad8d0', '#2a8a8a', '#e8fffa'], aura: '#6ae8e0' },
+  { name: 'Wild Howl', drain: 18, power: 2.5, guard: 0.6, eye: '#ffd0e0', pal: { base: '#6aa848', dark: '#3a6a2a', light: '#c8eaa0', ear: '#9ad070' }, spike: ['#7ab858', '#3a6a2a', '#d8f4b0'], aura: '#8ae060', mane: ['#4a8a38', '#2e5a22', '#a8d878'] },
 ];
 const cache = new Map();
 function pad(g) { const o = Array.from({ length: H }, () => new Array(W).fill(null)); for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) o[y + PY][x + PX] = g[y][x]; return o; }
@@ -33,6 +33,7 @@ function pose(G, view, kind, coat) {
   }
 }
 function spike(G, cx, base, h, lean, cols, wmax = 3) {
+  h = Math.max(1, Math.round(h * 0.4)); // short soft fur tufts (not a tall spiky crest)
   for (let i = 0; i < h; i++) { const w = Math.max(1, Math.round(wmax * (1 - i / h))), x0 = Math.round(cx + lean * i - w / 2);
     for (let k = 0; k < w; k++) G.set(x0 + k, base - i, k === 0 ? cols[1] : (k === w - 1 && w > 2) ? cols[2] : cols[0]); }
 }

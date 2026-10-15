@@ -73,8 +73,11 @@ function pepe(blink) { const [c, g] = mk(120, 100);
   for (let x = 26; x <= 94; x++) { const y = 58 + Math.round(Math.sin((x - 26) / 68 * Math.PI) * 6); g.fillStyle = '#9b2d2d'; g.fillRect(x, y, 1, 3); px(g, x, y - 1, '#173a18'); }
   g.fillStyle = '#ff9a9a'; g.fillRect(16, 52, 8, 4); g.fillRect(96, 52, 8, 4);
   ORBCOL.forEach((col, i) => blob(g, 30 + i * 10, 13 + Math.abs(i - 3) * 2, 3.5, 3.5, col, null, '#ffffff', '#173a18')); return c; }
-function orb(n) { const [c, g] = mk(14, 14); blob(g, 7, 7, 6, 6, '#58c45a', '#2f8a3c', '#c8ffb8', '#123a16');
-  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 - Math.PI / 2; px(g, Math.round(6.5 + Math.cos(a) * 2.6), Math.round(7 + Math.sin(a) * 2.6), '#fff27a'); } if (n === 1) px(g, 7, 7, '#fff27a'); px(g, 4, 4, '#fff'); return c; }
+// Wish Lily n: a water-lily blossom on a pad, one petal colour per lily (no glowing ball, no star count)
+function orb(n) { const [c, g] = mk(14, 14); const col = ORBCOL[n - 1];
+  blob(g, 7, 10, 6, 3, '#3f8a3a', '#2a6a2a', '#6ec85a', '#123a16'); g.clearRect(7, 9, 1, 3);
+  for (const [x, y] of [[4, 6], [10, 6], [7, 3], [5, 3], [9, 3]]) blob(g, x, y, 2.2, 2.2, col, null, '#ffffff', '#123a16');
+  blob(g, 7, 6, 1.6, 1.6, '#fff27a', null, null, null); return c; }
 const [bone, bg] = mk(12, 8); bg.fillStyle = '#5a3a20'; bg.fillRect(0, 0, 12, 8); bg.clearRect(4, 0, 4, 1); bg.clearRect(4, 7, 4, 1); bg.fillStyle = '#fff4e0'; bg.fillRect(1, 1, 3, 6); bg.fillRect(8, 1, 3, 6); bg.fillRect(3, 2, 6, 4); bg.fillStyle = '#d8c8a8'; bg.fillRect(3, 5, 6, 1);
 const [chest, chg] = mk(16, 14); chg.fillStyle = '#3f2814'; chg.fillRect(0, 2, 16, 12); chg.fillStyle = '#b07a42'; chg.fillRect(1, 3, 14, 10); chg.fillStyle = '#d29a5a'; chg.fillRect(1, 3, 14, 3); chg.fillStyle = '#f6c94c'; chg.fillRect(0, 6, 16, 2); chg.fillRect(7, 5, 2, 4);
 // human ally, front-facing, matched to the 24x32 Inu sprite cell
@@ -88,8 +91,8 @@ function human(skin, hair, shirt, pants, long, step = 0, eye = INK) { const [c, 
   if (eye !== INK) { R(9, 8, 1, 1, '#ffffff'); R(13, 8, 1, 1, '#ffffff'); for (const [x, h] of [[6, 3], [9, 4], [12, 5], [15, 4], [18, 3]]) R(x, 1 - h + 2, 2, h, hair); }
   return c; }
 const H = { rin: ['#f4c8a0', '#3a2a6a', '#e0603a', '#2e4a7a', 1], tomo: ['#d8a070', '#e8e8e8', '#4a7a4a', '#6a5a3a', 0], aki: ['#e8b48a', '#6a3a1a', '#3a6a8a', '#3a3a3a', 0] };
-// 'Spark' power-up for human allies: hair charges to electric white-cyan, eyes glow
-const SPARK = { rin: '#d8fbff', aki: '#e6fbff' };
+// 'Focus' power-up for human allies: eyes glow, hair keeps its natural colour (no glowing/spiked hair)
+const SPARK = { rin: '#3a2a6a', aki: '#6a3a1a' };
 function humans() { const o = {}; for (const k in H) { o[k] = [0, 1, 0, 2].map((st) => human(...H[k], st)); if (SPARK[k]) o[k + '_spark'] = [0, 1, 0, 2].map((st) => human(H[k][0], SPARK[k], H[k][2], H[k][3], H[k][4], st, '#5ff0ff')); } return o; }
 export function buildArt() {
   return { tiles, SOLID, TALL, tall, cate: [cate(0, 0), cate(1, 0), cate(0, 1), cate(-1, 1)], kitten: [kitten(0), kitten(1)], boar: [boar(0), boar(1)], golem: [golem(0), golem(1)],
