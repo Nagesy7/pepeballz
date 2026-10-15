@@ -1,4 +1,5 @@
-// $KIBBLE network layer for PepeBallz. SIMULATED ONLY: no blockchain calls, no real money moves.
+// $KIBBLE network layer for PepeBallz. Real kibble-pay wallet by default (purchases show 'KIBBLE launching soon' until the
+// $KIBBLE mint is set); SimWallet + local ledger ONLY in demo mode (?demo=1), clearly labelled.
 // Patterns and fee math follow Inu Verse src/mall.js + src/leaderboards.js:
 //   amounts are integer micro-KIBBLE (1 KIBBLE = 1,000,000 u, "millionths") so every split is exact.
 //   2% fee on Wish Shop purchases: 1% treasury (OWNER_WALLET), 0.25% daily, 0.5% weekly, 0.25% monthly pool.
@@ -12,7 +13,6 @@
 // and be installed with setWallet(adapter). settle() is the only place money moves.
 export const U = 1_000_000;
 export const OWNER_WALLET = 'BzLYTFAfUsjzQ5x8bx5BbPK4DFtaHrLCuferkvkxTNGJ'; // treasury (multisig later). Display only while simulated.
-export const POOL_WALLETS = { daily: 'DAILY_POOL_PLACEHOLDER', weekly: 'WEEKLY_POOL_PLACEHOLDER', monthly: 'MONTHLY_POOL_PLACEHOLDER' };
 export const FEE_BPS = { owner: 100, daily: 25, weekly: 50, monthly: 25 };
 export const FEE_TOTAL_BPS = 200;
 export const toU = (k) => Math.round(k * U);
@@ -20,7 +20,8 @@ export const fmtK = (u) => (u / U).toFixed(u % 10000 ? 4 : 2);
 export function feeSplit(priceU) {
   const fee = Math.floor(priceU * FEE_TOTAL_BPS / 10000);
   const daily = Math.floor(priceU * FEE_BPS.daily / 10000), weekly = Math.floor(priceU * FEE_BPS.weekly / 10000), monthly = Math.floor(priceU * FEE_BPS.monthly / 10000);
-  return { price: priceU, fee, owner: fee - daily - weekly - monthly, daily, weekly, monthly, total: priceU + fee };
+  // FEE-INCLUSIVE (same rule as kibble-pay): the player pays exactly priceU; the 2% split is carved out of it.
+  return { price: priceU, fee, owner: fee - daily - weekly - monthly, daily, weekly, monthly, total: priceU };
 }
 // ---------- wallet adapter ----------
 export class SimWallet {
@@ -31,6 +32,31 @@ export class SimWallet {
   async burn({ amountU }) { if (amountU > this.s.balU) return { ok: false, reason: 'Insufficient simulated KIBBLE' }; this.s.balU -= amountU; return { ok: true, sig: 'SIMBURN-' + Date.now().toString(36) }; }
   async transfer({ amountU }) { if (amountU > this.s.balU) return { ok: false, reason: 'Insufficient simulated KIBBLE' }; this.s.balU -= amountU; return { ok: true, sig: 'SIMULATED-' + Date.now().toString(36) }; }
 }
+export const GAME = 'pepeballz';
+export const SOON_MSG = 'KIBBLE launching soon: purchases open at launch.';
+export const DEMO = typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === '1';
+export let mode = DEMO ? 'demo' : 'loading', kp = null, serverPools = null, serverBoards = {}, serverBurnedU = 0, glue = null;
+// placeholder while kibble-pay loads: never fakes a balance
+export const pendingWallet = () => ({ id: 'pending', simulated: false, live: false, address: null, async connect() { throw new Error('Wallet still loading, try again'); }, async balanceU() { return 0; }, async holdingsU() { return 0; }, async transfer() { return { ok: false, reason: SOON_MSG }; }, async burn() { return { ok: false, reason: SOON_MSG }; } });
+// real kibble-pay adapter (catalog ids pepeballz:<id>, fee-inclusive; amounts come from the server catalog)
+export function realWallet(sdk) { const w = sdk.asPepeBallzWallet(), live = () => !!sdk.cfg?.provisioned;
+  return { id: 'kibble-pay', simulated: false, get live() { return live(); }, get address() { return sdk.session ? sdk.address : null; },
+    connect: () => w.connect(), balanceU: async () => (live() ? w.balanceU() : 0), holdingsU: async () => (live() ? w.holdingsU() : 0),
+    async transfer(o) { return live() ? w.transfer({ itemId: o.itemId || o.memo }) : { ok: false, reason: SOON_MSG }; },
+    async burn(o) { return live() ? w.burn(o) : { ok: false, reason: SOON_MSG }; },
+    async inventory() { return (await sdk.inventory(GAME))?.[GAME] || {}; } }; }
+export async function initKibble(apiBase = 'https://kibble-pay.vercel.app') {
+  glue = await import(apiBase + '/inu-games.js'); glue.mountFooter(DEMO ? 'demo' : 'soon');
+  if (DEMO) return { mode };
+  const K = await glue.initKibble({ game: GAME, apiBase }); mode = K.mode; document.getElementById('inu-legal')?.remove(); glue.mountFooter(K.mode);
+  if (K.kp) { kp = K.kp; setWallet(realWallet(kp)); refreshServer().catch(() => {}); } return K; }
+export async function refreshServer() { if (!kp) return; const P = await kp.pools(); serverPools = P.pools; serverBurnedU = Number(P.burnedAllBaseUnits || 0);
+  for (const pool of ['daily', 'weekly', 'monthly']) serverBoards[pool] = (await kp.scores(GAME, pool)).entries; }
+// wallet-owned cosmetics: purchases (pepeballz:<id>) and opt-in burns (burn:<id>) from /api/inventory
+export function syncOwned(s, inv) { const n = ensureNet(s); for (const k of Object.keys(inv || {})) { if (!(inv[k] > 0)) continue; const id = k.startsWith('burn:') ? k.slice(5) : k.startsWith(GAME + ':') ? k.slice(GAME.length + 1) : null; if (id && COSMETICS[id] && !n.owned.includes(id)) n.owned.push(id); } return n.owned; }
+// run score for the shared prize board (higher = better): faster clear, fewer deaths
+export const runScore = (timeMs, deaths) => Math.max(1, Math.min(100000, Math.round(1e6 / Math.max(10, timeMs / 1000)) - deaths * 100));
+export async function postRun(timeMs, deaths) { const w = wallet; if (!kp || !w?.address || w.simulated) return null; const sc = runScore(timeMs, deaths); const r = await kp.submitScore(GAME, sc, timeMs); refreshServer().catch(() => {}); return { ...r, score: sc }; }
 let wallet = null;
 export const setWallet = (w) => { wallet = w; return w; };
 export const getWallet = () => wallet;
@@ -85,8 +111,8 @@ export async function buyWish(s, id, w = wallet) {
   const n = ensureNet(s), q = quote(id); if (!q) return { ok: false, reason: 'Not for sale' };
   if (n.owned.includes(id)) return { ok: false, reason: 'Already owned' };
   if (!w) return { ok: false, reason: 'Connect a wallet' };
-  const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:' + id }); if (!r.ok) return r;
-  settle(n, q, id, r.sig); n.owned.push(id); return { ok: true, quote: q };
+  const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:' + id, itemId: 'pepeballz:' + id }); if (!r.ok) return r;
+  if (w.simulated) settle(n, q, id, r.sig); n.owned.push(id); return { ok: true, quote: q };
 }
 // ---------- seeded weekly Wish Orb hunt ----------
 const WEEK = 7 * 864e5, EPOCH = Date.UTC(2026, 0, 5); // a Monday
@@ -175,8 +201,8 @@ export function settleBounty(s, bounty, contribs, pool = 'weekly') { const n = e
   const amt = Math.floor(n.pools[pool] * bounty.shareBps / 10000); const out = splitByContribution(amt, contribs); n.pools[pool] -= out.reduce((a, o) => a + o.amountU, 0);
   n.winners.unshift({ pool: 'bounty:' + bounty.id, payouts: out, simulated: true }); return { ok: true, payouts: out }; }
 // ---------- 5) Fighter launches (stub): Launch Hall tokens sponsor a warrior skin ----------
-export const LISTING_FEE = 25; // KIBBLE, goes to the treasury, plus the usual 2% split on top
-export function listingQuote() { const q = feeSplit(toU(LISTING_FEE)); return { ...q, owner: q.owner + q.price, treasuryTotal: q.owner + q.price }; }
+export const LISTING_FEE = 25; // KIBBLE, fee-inclusive: treasury keeps it minus the 1% pool share (DEMO-only stub; not in the live catalog)
+export function listingQuote() { const q = feeSplit(toU(LISTING_FEE)), t = q.price - q.daily - q.weekly - q.monthly; return { ...q, owner: t, treasuryTotal: t }; }
 export async function listFighter(s, { token, skin }, w = wallet) { const n = ensureNet(s); if (!/^\$?[A-Z0-9]{2,10}$/.test(token || '')) return { ok: false, reason: 'Bad token ticker' };
   if (!w) return { ok: false, reason: 'Connect a wallet' }; const q = listingQuote(); const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:launch:' + token }); if (!r.ok) return r;
   n.treasuryU += q.owner; n.pools.daily += q.daily; n.pools.weekly += q.weekly; n.pools.monthly += q.monthly; n.launches ||= []; const L = { token, skin, status: 'pending review (stub)', sig: r.sig, simulated: true }; n.launches.unshift(L);
@@ -193,10 +219,10 @@ export function seasonAccess(season, ms, holdU) { const holder = tierRank(tierFo
 export const currentSeason = (ms) => SEASONS.find((x) => ms >= x.start && ms < x.end) || SEASONS[0];
 export async function buySeasonItem(s, id, ms, holdU, w = wallet) { const c = COSMETICS[id], se = SEASONS.find((x) => x.id === c?.season); if (!se) return { ok: false, reason: 'Not a season item' };
   if (!seasonAccess(se, ms, holdU).open) return { ok: false, reason: 'Season not open' }; const n = ensureNet(s); if (n.owned.includes(id)) return { ok: false, reason: 'Already owned' };
-  const q = feeSplit(toU(c.shop)); const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:' + id }); if (!r.ok) return r; settle(n, q, id, r.sig); n.owned.push(id); return { ok: true, quote: q }; }
+  const q = feeSplit(toU(c.shop)); const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:' + id, itemId: 'pepeballz:' + id }); if (!r.ok) return r; if (w.simulated) settle(n, q, id, r.sig); n.owned.push(id); return { ok: true, quote: q }; }
 // ---------- 7) Burn for legends ----------
-export const PUBLIC_BURN_BASE_U = toU(48210); // simulated community total before you
 export async function burnForLegend(s, id, w = wallet) { const c = COSMETICS[id], n = ensureNet(s); if (!c?.burn) return { ok: false, reason: 'Not a legend' }; if (n.owned.includes(id)) return { ok: false, reason: 'Already unlocked' };
-  if (!w) return { ok: false, reason: 'Connect a wallet' }; const amt = toU(c.burn); const r = await w.burn({ amountU: amt, memo: 'pepeballz:legend:' + id }); if (!r.ok) return r;
-  n.burnedU = (n.burnedU || 0) + amt; n.owned.push(id); n.ledger.unshift({ item: 'burn:' + id, burned: amt, sig: r.sig, simulated: true }); return { ok: true, burnedU: amt }; }
-export const publicBurned = (s) => PUBLIC_BURN_BASE_U + (ensureNet(s).burnedU || 0);
+  if (!w) return { ok: false, reason: 'Connect a wallet' }; const amt = toU(c.burn); const r = await w.burn({ amountU: amt, memo: 'pepeballz:legend:' + id, itemId: id }); if (!r.ok) return r;
+  n.burnedU = (n.burnedU || 0) + amt; n.owned.push(id); n.ledger.unshift({ item: 'burn:' + id, burned: amt, sig: r.sig, simulated: !!w.simulated }); return { ok: true, burnedU: amt }; }
+// real total of opt-in burns across all Inu games (kibble-pay); demo mode = only your own demo burns. No invented base.
+export const publicBurned = (s) => (kp && !DEMO ? serverBurnedU : ensureNet(s).burnedU || 0);

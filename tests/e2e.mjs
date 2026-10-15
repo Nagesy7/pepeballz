@@ -95,7 +95,7 @@ const browser = await chromium.launch();
   await tap(page, 'Enter'); await tap(page, 'ArrowDown'); await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200); check('desktop: Wish Network menu', (await S(page)).menu === 'Wish Network');
   await tap(page, 'KeyJ'); await page.waitForTimeout(200); for (let i = 0; i < 4; i++) await tap(page, 'ArrowDown'); await tap(page, 'KeyJ'); await page.waitForTimeout(200);
   const statsBefore = await page.evaluate(() => JSON.stringify(window.__pb.p.stats)); await tap(page, 'KeyJ'); await page.waitForTimeout(300); await page.screenshot({ path: 'proof/desktop-18-wish-shop.png' });
-  const net = await page.evaluate(() => window.__pb.net); check('desktop: Wish Shop purchase splits 2% fee', net.owned.length === 1 && net.treasuryU === 60000 && net.pools.weekly === 30000, JSON.stringify(net.pools));
+  const net = await page.evaluate(() => window.__pb.net), tst = await page.evaluate(() => window.__pb.toast?.msg || ''); check('desktop: Wish Shop (real mode, mint not set) says KIBBLE launching soon, buys nothing', net.owned.length === 0 && net.treasuryU === 0 && /launching soon/i.test(tst), tst);
   check('desktop: purchase does not change stats', statsBefore === (await page.evaluate(() => JSON.stringify(window.__pb.p.stats))));
   await tap(page, 'KeyX'); await tap(page, 'ArrowUp'); await tap(page, 'KeyJ'); await page.waitForTimeout(200); await tap(page, 'ArrowRight'); await page.waitForTimeout(200); await page.screenshot({ path: 'proof/desktop-19-leaderboards.png' });
   check('desktop: leaderboards', (await S(page)).menu === 'Leaderboards'); await tap(page, 'KeyX'); await page.waitForTimeout(100);

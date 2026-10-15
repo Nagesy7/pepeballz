@@ -1,14 +1,14 @@
 import test from 'node:test'; import assert from 'node:assert';
 import * as K from '../src/kibble.js'; import * as C from '../src/core.js';
 test('2% fee split in millionths is exact and matches spec', () => {
-  const q = K.feeSplit(K.toU(10)); assert.deepStrictEqual([q.fee, q.owner, q.daily, q.weekly, q.monthly, q.total], [200000, 100000, 25000, 50000, 25000, 10200000]);
+  const q = K.feeSplit(K.toU(10)); assert.deepStrictEqual([q.fee, q.owner, q.daily, q.weekly, q.monthly, q.total], [200000, 100000, 25000, 50000, 25000, 10000000]);
   for (const p of [1, 3, 777, 1234567, K.toU(9.5), K.toU(0.0001)]) { const s = K.feeSplit(p); assert.strictEqual(s.owner + s.daily + s.weekly + s.monthly, s.fee); assert.ok(s.owner >= s.daily); }
 });
 test('buyWish settles to treasury + pools and never changes stats', async () => {
   const s = {}, p = C.init(C.newPlayer()), before = JSON.stringify({ st: p.stats, l: p.level, i: p.inventory, hp: p.hp });
   const w = new K.SimWallet({}); await w.connect(); const b0 = await w.balanceU();
   const r = await K.buyWish(s, 'outfit_tux', w); assert.ok(r.ok);
-  assert.strictEqual(b0 - await w.balanceU(), K.toU(12.24)); assert.strictEqual(s.net.treasuryU, 120000);
+  assert.strictEqual(b0 - await w.balanceU(), K.toU(12)); assert.strictEqual(s.net.treasuryU, 120000);
   assert.deepStrictEqual(s.net.pools, { daily: 30000, weekly: 60000, monthly: 30000 }); assert.strictEqual(s.net.ledger[0].to, K.OWNER_WALLET);
   assert.strictEqual((await K.buyWish(s, 'outfit_tux', w)).ok, false); assert.strictEqual((await K.buyWish(s, 'aura_gold', w)).ok, false);
   assert.strictEqual(JSON.stringify({ st: p.stats, l: p.level, i: p.inventory, hp: p.hp }), before);

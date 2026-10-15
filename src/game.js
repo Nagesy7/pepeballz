@@ -71,10 +71,14 @@ const pl = { x: 0, y: 0, dir: 0, walk: 0, moving: false, atk: 0, combo: 0, combo
 pl.stage = 0; pl.beamT = 0; Object.defineProperty(pl, 'ascend', { get: () => pl.stage > 0, set: (v) => { if (!v) pl.stage = 0; else if (!pl.stage) pl.stage = 1; } });
 G.pl = pl;
 const STORE = (() => { try { localStorage.setItem('_t', 1); return localStorage; } catch { const m = {}; return { getItem: (k) => m[k] ?? null, setItem: (k, v) => { m[k] = String(v); } }; } })();
-const NET_KEY = 'pepeballz.net.v1';
+const NET_KEY = K.DEMO ? 'pepeballz.demo.net.v1' : 'pepeballz.net.v1'; // demo progress never leaks into real mode
 function loadNet() { try { G.root = JSON.parse(STORE.getItem(NET_KEY)) || {}; } catch { G.root = {}; } G.net = K.ensureNet(G.root); G.net.wallet ||= {}; }
 const saveNet = () => STORE.setItem(NET_KEY, JSON.stringify(G.root));
-loadNet(); K.setWallet(new K.SimWallet(G.net.wallet));
+loadNet();
+if (K.DEMO) K.setWallet(new K.SimWallet(G.net.wallet));
+else { // real mode: purchased / burned cosmetics come only from the wallet's server inventory
+  G.net.owned = G.net.owned.filter((id) => !K.COSMETICS[id]?.shop && !K.COSMETICS[id]?.burn); K.setWallet(K.pendingWallet()); }
+K.initKibble().then(() => { if (K.getWallet().address) refreshWallet(); }).catch(() => {});
 function saveGame(quiet) { if (G.mode !== 'story') return; G.p.area = G.area.id; G.p.x = pl.x; G.p.y = pl.y; C.save(STORE, G.p); saveNet(); if (!quiet) toast('Game saved'); }
 const toast = (msg, t = 2) => { G.toast = { msg, t }; };
 const P = () => G.p, D = () => C.derived(G.p);
@@ -111,7 +115,10 @@ function updateDialog(dt) {
 }
 
 // ---------------- menus ----------------
-function openMenu(m) { m.sel = m.sel || 0; m.parent = G.menu; G.menu = m; Audio8.sfx('select'); }
+function openMenu(m) { // simulated payouts / stubs are demo-only: outside ?demo=1 they explain instead of faking money
+  const wrap = (it) => (it && DEMO_ONLY(it.label || '') ? { ...it, sub: 'Demo mode only (?demo=1)', act: () => toast('Demo mode only: open the game with ?demo=1') } : it);
+  if (Array.isArray(m.items)) m.items = m.items.map(wrap); else if (typeof m.items === 'function') { const f = m.items; m.items = () => f().map(wrap); }
+  m.sel = m.sel || 0; m.parent = G.menu; G.menu = m; Audio8.sfx('select'); }
 function closeMenu() { G.menu = G.menu?.parent || null; }
 function updateMenu(dt) {
   const m = G.menu, items = typeof m.items === 'function' ? m.items() : m.items; m._items = items;
@@ -123,7 +130,7 @@ function updateMenu(dt) {
 function pauseMenu() {
   openMenu({ title: 'Menu', items: () => [
     { label: 'Items', act: itemsMenu }, { label: `Stats${P().points ? ` (+${P().points})` : ''}`, act: statsMenu },
-    { label: 'Wish Network (SIM)', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
+    { label: 'Wish Network', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
     { label: 'Sound: toggle', act: () => toast(Audio8.toggleMute() ? 'Muted' : 'Sound on') }, { label: 'Close', act: closeMenu } ] });
 }
 function itemsMenu() {
@@ -363,12 +370,13 @@ function startRun(mode) {
 }
 G.startRun = startRun;
 function finishRun() {
-  const r = G.run, ms = Math.round(performance.now() - r.t0), board = r.mode, n = G.net;
+  const r = G.run, ms = Math.round(performance.now() - r.t0), board = r.mode, n = G.net; G.posted = '';
+  K.postRun(ms, r.deaths).then((p) => { if (p) G.posted = p.ok ? `Posted score ${p.score} to the prize board` : 'Prize board: ' + p.reason; }).catch((e) => { G.posted = 'Prize board: ' + e.message; });
   const row = { id: 'you', name: n.pack.tag ? `Shiba [${n.pack.tag}]` : 'Shiba (you)', timeMs: ms, deaths: r.deaths, at: Date.now() };
   const key = board === 'rush' ? 'rush' : 'huntRuns'; n[key] ||= []; n[key].push({ ...row, period: board === 'rush' ? r.day : r.week }); if (n[key].length > 40) n[key].shift();
   const ranked = K.rankRuns([...K.sampleRows(board, board === 'rush' ? r.day : r.week), ...bestMine(board)]); const mine = ranked.find((x) => x.id === 'you');
   K.addPackPoints(G.root, board === 'rush' ? 'rushClear' : 'huntFinish'); if (mine.rank <= 3) K.addPackPoints(G.root, board === 'rush' ? 'rushTop3' : 'huntTop3'); saveNet();
-  setTimeout(() => { G.boss = null; openMenu({ title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, `Your rank: #${mine.rank} of ${ranked.length} (rivals simulated)`, n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
+  setTimeout(() => { G.boss = null; openMenu({ title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, K.DEMO ? `Your rank: #${mine.rank} of ${ranked.length} (demo rivals)` : (G.posted || (K.getWallet().address ? 'Posting to the prize board…' : 'Sign in (Wish Network) to post runs to the prize board')), n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
     items: [{ label: 'View leaderboards', act: leaderboardsMenu }, { label: 'Return to story', act: () => endRun(true) }] }); }, 600);
 }
 function endRun() { G.menu = null; G.mode = 'story'; G.run = null; G.hunt = null; G.boss = null; if (storySave) { G.p = storySave; enterArea(G.p.area, G.p.x / TILE, G.p.y / TILE); G.state = 'play'; } else toTitle(); }
@@ -376,14 +384,18 @@ const fmtTime = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000
 function bestMine(board) { const n = G.net, list = (board === 'rush' ? n.rush : n.huntRuns) || [], per = board === 'rush' ? K.dayId(Date.now()) : K.weekId(Date.now()); const mine = list.filter((x) => x.period === per); return mine.length ? [K.rankRuns(mine)[0]] : []; }
 function boardRows(board) { const per = board === 'rush' ? K.dayId(Date.now()) : K.weekId(Date.now()); return K.rankRuns([...K.sampleRows(board, per), ...bestMine(board)]); }
 function cupRows() { const n = G.net; const packs = [{ tag: 'FANG', points: 140 }, { tag: 'MOCHI', points: 95 }, { tag: 'KURO', points: 60 }]; if (n.pack.tag) packs.push({ tag: n.pack.tag, points: n.pack.points, mine: true }); return K.kibbleCup(packs); }
-async function refreshWallet() { const w = K.getWallet(); if (!w.address) return; G.walletBal = await w.balanceU(); G.holdU = await w.holdingsU(); }
+// purchases/burns: before launch just say so; otherwise sign in (errors become toasts, never page errors)
+async function ensureWallet() { if (!K.DEMO && K.mode !== 'live') { toast(K.SOON_MSG, 3); return false; } try { await K.getWallet().connect(); await refreshWallet(); return true; } catch (e) { toast(e.message, 3); return false; } }
+async function refreshWallet() { const w = K.getWallet(); if (!w.address) return; G.walletBal = await w.balanceU(); G.holdU = await w.holdingsU();
+  if (!w.simulated && w.inventory) { K.syncOwned(G.root, await w.inventory()); saveNet(); if (!G.shiba && K.glue) G.shiba = await K.glue.loadShiba(w.address).catch(() => null); } }
 const tier = () => K.tierFor(G.holdU || 0);
-const SIM = 'SIMULATED: no real KIBBLE moves';
+const SIM = () => (K.DEMO ? 'DEMO MODE (?demo=1): fake KIBBLE, nothing real' : K.mode === 'live' ? 'LIVE $KIBBLE: you sign every payment in Phantom' : K.SOON_MSG);
+const DEMO_ONLY = (lbl) => !K.DEMO && /\(sim\)|sim allies|^SIM:|^Settle|^List \$PAWS/.test(lbl);
 function networkMenu() {
   refreshWallet();
-  openMenu({ title: 'Wish Network', info: () => [SIM, K.getWallet().address ? `Wallet ${K.getWallet().address.slice(0, 10)}..  ${K.fmtK(G.walletBal || 0)} KIBBLE  Tier: ${tier().name}` : 'Wallet: not connected (simulated)'],
+  openMenu({ title: 'Wish Network', info: () => [SIM(), K.getWallet().address ? `Wallet ${K.getWallet().address.slice(0, 10)}..  ${K.fmtK(G.walletBal || 0)} KIBBLE  Tier: ${tier().name}` : (K.DEMO ? 'Wallet: not connected (demo)' : 'Wallet: not signed in. Scores need a Phantom sign-in (free).')],
     items: () => [
-      { label: K.getWallet().address ? 'Wallet: connected (SIM)' : 'Connect SIM wallet', act: async () => { await K.getWallet().connect(); await refreshWallet(); toast('SIM wallet connected'); } },
+      { label: K.getWallet().address ? (K.DEMO ? 'Wallet: connected (DEMO)' : 'Wallet: signed in') : (K.DEMO ? 'Connect DEMO wallet' : 'Sign in with Phantom'), act: async () => { try { await K.getWallet().connect(); await refreshWallet(); toast(K.DEMO ? 'DEMO wallet connected' : 'Signed in. Runs now post to the prize board.'); } catch (e) { toast(e.message); } } },
       { label: 'Weekly Wish Orb Hunt', sub: 'Free. Same 7 orbs for everyone this week. Fastest wins.', act: () => startRun('hunt') },
       { label: 'Cate Boss Rush', sub: 'Free. Fixed build. Fastest clear wins.', act: () => startRun('rush') },
       { label: 'Leaderboards & prize pools', act: leaderboardsMenu }, { label: 'Pepe Wish Shop (cosmetic)', act: wishShop }, { label: 'Cosmetics & holder tier', act: cosmeticsMenu },
@@ -393,22 +405,25 @@ function networkMenu() {
 function leaderboardsMenu() {
   let tab = 0; const tabs = ['daily', 'weekly', 'monthly'], names = { daily: 'Daily: Cate Boss Rush', weekly: 'Weekly: Wish Orb Hunt', monthly: 'Monthly: Kibble Cup (packs)' };
   openMenu({ title: 'Leaderboards', info: () => { const pool = tabs[tab], n = G.net; const rows = pool === 'monthly' ? cupRows().map((r) => `#${r.rank} [${r.tag}] ${r.points} pts${r.mine ? ' <you' : ''}`) : boardRows(K.POOL_BOARDS[pool]).slice(0, 6).map((r) => `#${r.rank} ${r.name.padEnd(13)} ${fmtTime(r.timeMs)} d${r.deaths}${r.id === 'you' ? ' <' : ''}`);
-      return [`< ${names[pool]} >   pool ${K.fmtK(n.pools[pool])} KIBBLE (sim)`, 'Paid by rank: 50% / 30% / 20%. No draws, no entry fee.', ...rows]; },
+      if (!K.DEMO) { const b = K.serverBoards[pool] || [], me = K.getWallet().address, P = K.serverPools?.[pool];
+        return [`< ${pool.toUpperCase()}: PepeBallz runs (wallet-signed) >`, `Live pool ${P ? K.fmtK(Number(P.accruedBaseUnits)) : '0'} KIBBLE, paid to the combined top 3 of all Inu games`, 'Free entry, skill only. Score = faster clear, fewer deaths.',
+          ...(b.length ? b.slice(0, 6).map((e) => `#${e.rank} ${e.wallet.slice(0, 4)}..${e.wallet.slice(-4)}  ${e.score}${e.wallet === me ? ' <you' : ''}`) : ['No signed runs yet. Sign in and clear the Boss Rush or Hunt!'])]; }
+      return [`< ${names[pool]} >   pool ${K.fmtK(n.pools[pool])} KIBBLE (demo)`, 'DEMO: rivals are simulated. Paid by rank: 50% / 30% / 20%.', ...rows]; },
     items: () => [{ label: `Board: ${tabs[tab]} (left/right)`, lr: (d) => (tab = (tab + d + 3) % 3), act: () => (tab = (tab + 1) % 3) },
       { label: 'Settle this period (sim)', sub: 'Awards the pool to the current top 3', act: async () => { const pool = tabs[tab]; const ranked = pool === 'monthly' ? cupRows().map((r) => ({ ...r, id: r.mine ? 'you' : r.tag, name: r.tag })) : boardRows(K.POOL_BOARDS[pool]);
         const out = K.awardPool(G.root, pool, ranked, pool); const mine = out.find((o) => o.id === 'you'); if (mine) G.net.wallet.balU += mine.amountU; saveNet(); await refreshWallet();
         toast(out.length ? `Paid ${out.map((o) => `#${o.rank} ${K.fmtK(o.amountU)}`).join(', ')}` : 'Pool is empty: buy a cosmetic to seed it', 3); } }, { label: 'Back', act: closeMenu }] });
 }
 function wishShop() {
-  openMenu({ title: 'Pepe Wish Shop', info: () => [SIM, 'Cosmetic only. Never changes stats. Fee 2%: 1% treasury,', '0.25% daily / 0.5% weekly / 0.25% monthly prize pools.', `Treasury ${K.OWNER_WALLET.slice(0, 6)}..${K.OWNER_WALLET.slice(-4)}  Balance ${K.fmtK(G.walletBal || 0)}`],
-    items: () => [...K.WISH_SHOP.map((c) => { const q = K.quote(c.id), own = G.net.owned.includes(c.id); return { label: `${c.name}  ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: own ? 'Equip it in Cosmetics' : `${K.fmtK(q.price)} + fee ${K.fmtK(q.fee)} (treasury ${K.fmtK(q.owner)}, pools ${K.fmtK(q.daily)}/${K.fmtK(q.weekly)}/${K.fmtK(q.monthly)})`, disabled: own,
-      act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Wish granted: ${c.name} (sim)`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
+  openMenu({ title: 'Pepe Wish Shop', info: () => [SIM(), 'Cosmetic only. Never changes stats. Price includes the 2%:', '1% treasury, 0.25% daily / 0.5% weekly / 0.25% monthly pools.', `Treasury ${K.OWNER_WALLET.slice(0, 6)}..${K.OWNER_WALLET.slice(-4)}  Balance ${K.fmtK(G.walletBal || 0)}`],
+    items: () => [...K.WISH_SHOP.map((c) => { const q = K.quote(c.id), own = G.net.owned.includes(c.id); return { label: `${c.name}  ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: own ? 'Equip it in Cosmetics' : `incl. 2% (treasury ${K.fmtK(q.owner)}, pools ${K.fmtK(q.daily)}/${K.fmtK(q.weekly)}/${K.fmtK(q.monthly)})`, disabled: own,
+      act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Wish granted: ${c.name}${K.DEMO ? ' (demo)' : ''}`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
 }
 function cosmeticsMenu() {
   const kinds = ['aura', 'bolt', 'beam', 'outfit', 'title'];
   const avail = (k) => ['', ...Object.keys(K.COSMETICS).filter((id) => K.COSMETICS[id].kind === k && (G.net.owned.includes(id) || K.unlockedByTier(G.holdU || 0).includes(id)))];
   const label = (k) => { const v = P().cosmetics[k]; return v && K.COSMETICS[v] ? K.COSMETICS[v].name : k === 'aura' ? 'Gold (default)' : k === 'beam' ? 'Cyan (default)' : k === 'bolt' ? 'Blue-white (default)' : k === 'outfit' ? 'Hoodie (default)' : 'none'; };
-  openMenu({ title: 'Cosmetics', info: () => [`Holder tier: ${tier().name} (holdings ${K.fmtK(G.holdU || 0)} sim KIBBLE)`, 'Tiers: Pup 0, Hound 1k, Alpha 10k, Shogun 100k. Cosmetic only.'],
+  openMenu({ title: 'Cosmetics', info: () => [`Holder tier: ${tier().name} (holdings ${K.fmtK(G.holdU || 0)} ${K.DEMO ? 'demo ' : ''}KIBBLE)`, 'Tiers: Pup 0, Hound 1k, Alpha 10k, Shogun 100k. Cosmetic only.'],
     items: () => [...kinds.map((k) => ({ label: `${k[0].toUpperCase() + k.slice(1)}: ${label(k)}  <>`, lr: (d) => { const l = avail(k), i = Math.max(0, l.indexOf(P().cosmetics[k] || '')); P().cosmetics[k] = l[(i + d + l.length) % l.length]; G.net.cos = { ...P().cosmetics }; saveNet(); }, act: () => {} })),
       { label: `Pepe's Golden Orb: ${K.goldenOrbEligible(G.holdU || 0) ? (G.net.useGolden ? 'ON' : 'off') : 'locked (Alpha+)'}`, sub: 'Rare cosmetic 8th orb. Summon with it for Golden Pepe + a unique title.', act: () => { if (!K.goldenOrbEligible(G.holdU || 0)) return toast('Alpha tier or higher'); G.net.useGolden = !G.net.useGolden; saveNet(); } },
       { label: 'SIM: raise holdings (tier preview)', act: async () => { const w = K.getWallet(); w.s.holdU = w.s.holdU >= K.toU(100000) ? 0 : w.s.holdU < K.toU(1000) ? K.toU(1000) : w.s.holdU * 10; saveNet(); await refreshWallet(); toast(`Tier: ${tier().name}`); } }, { label: 'Back', act: closeMenu }] });
@@ -458,30 +473,30 @@ function drawGhost(e, ox, oy) { const img = heroFrame(e.coat, 0, DIRS[e.dir], e.
   ctx.globalAlpha = 0.85; ctx.drawImage(img, Math.round(e.x - FORM_W / 2 - ox), Math.round(e.y - FORM_H + 2 - oy)); ctx.globalAlpha = 1; if (e.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.drawImage(img, Math.round(e.x - FORM_W / 2 - ox), Math.round(e.y - FORM_H + 2 - oy)); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   text(e.ghost.name, Math.round(e.x - ox), Math.round(e.y - FORM_H - 6 - oy), '#d0c0ff', 6, 'center'); R(e.x - 12 - ox, e.y - FORM_H - 12 - oy, 24, 3, '#1a1420'); R(e.x - 11 - ox, e.y - FORM_H - 11 - oy, Math.ceil(22 * e.hp / e.max), 1, '#d0a0ff'); }
 function tourneyMenu() {
-  openMenu({ title: 'Tournament of Paws', info: () => [SIM, 'Free weekly 8-ghost bracket. You fight live; other matches use saved ghosts.', 'All builds normalised to the same stat budget. Pool split 50/25/12.5/12.5 by placement.', `Tourney pool (30% of weekly): ${K.fmtK(Math.floor(G.net.pools.weekly * 0.3))} KIBBLE`, G.net.tourney ? `Last: ${['1st', '2nd', 'Top 4', 'Top 4', 'Top 8'][G.net.tourney.place]} (week ${G.net.tourney.week})` : ''],
+  openMenu({ title: 'Tournament of Paws', info: () => [SIM(), 'Free weekly 8-ghost bracket. You fight live; other matches use saved ghosts.', 'All builds normalised to the same stat budget. Pool split 50/25/12.5/12.5 by placement.', `Tourney pool (30% of weekly): ${K.fmtK(Math.floor(G.net.pools.weekly * 0.3))} KIBBLE`, G.net.tourney ? `Last: ${['1st', '2nd', 'Top 4', 'Top 4', 'Top 8'][G.net.tourney.place]} (week ${G.net.tourney.week})` : ''],
     items: [{ label: 'Enter this week (free)', act: startTourney }, { label: 'Settle tournament pool (sim)', act: async () => { const t = G.net.tourney; if (!t) return toast('Play this week first'); const amt = Math.floor(G.net.pools.weekly * 0.3), pl4 = t.placements.map((name, i) => ({ id: name.includes('you') ? 'you' : name, name })); const out = K.tourneyPayout(amt, pl4); G.net.pools.weekly -= out.reduce((a, o) => a + o.amountU, 0); const m = out.find((o) => o.id === 'you'); if (m) G.net.wallet.balU += m.amountU; saveNet(); await refreshWallet(); toast(out.length ? out.map((o) => `${o.name.split(' ')[0]} ${K.fmtK(o.amountU)}`).join(', ') : 'Pool empty', 3); } }, { label: 'Back', act: closeMenu }] });
 }
 function bountyContribs(b) { const mine = G.net.bounty?.[b.id] || {}, r = K.mulberry32(K.weekId(Date.now()) * 7 + b.goal), base = {}; ['Mochi', 'Kuro', 'Hana', 'Yuzu', 'Goma'].forEach((n) => (base['sim_' + n] = Math.floor(b.goal * (0.12 + r() * 0.07)))); return { ...base, ...mine }; }
 function bountyMenu() {
-  openMenu({ title: 'Cate Bounty Board', info: () => [SIM, 'Community goals. When met, a pool share is split by contribution.', ...K.BOUNTIES.map((b) => { const c = bountyContribs(b), t = K.bountyTotal(c); return `${b.name}: ${t}/${b.goal} (you ${c.you || 0}) share ${b.shareBps / 100}% of weekly`; })],
+  openMenu({ title: 'Cate Bounty Board', info: () => [SIM(), 'Community goals. When met, a pool share is split by contribution.', ...K.BOUNTIES.map((b) => { const c = bountyContribs(b), t = K.bountyTotal(c); return `${b.name}: ${t}/${b.goal} (you ${c.you || 0}) share ${b.shareBps / 100}% of weekly`; })],
     items: () => [...K.BOUNTIES.map((b) => ({ label: `Settle: ${b.name}`, act: async () => { const r = K.settleBounty(G.root, b, bountyContribs(b)); if (!r.ok) return toast(r.reason); const m = r.payouts.find((o) => o.id === 'you'); if (m) G.net.wallet.balU += m.amountU; saveNet(); await refreshWallet(); toast(`Paid ${r.payouts.length} contributors${m ? `, you ${K.fmtK(m.amountU)}` : ''}`, 3); } })), { label: 'Back', act: closeMenu }] });
 }
 function seasonMenu() { const now = Date.now(), se = K.currentSeason(now);
-  openMenu({ title: 'Seasons', info: () => [SIM, ...K.SEASONS.map((x) => { const a = K.seasonAccess(x, now, G.holdU || 0); return `${x.name}: ${a.open ? (a.early ? 'HOLDER EARLY ACCESS' : 'open') : 'closed'}`; }), 'Holders (Hound+) get a 2-day early-access weekend.'],
-    items: () => [...se.set.map((id) => { const c = K.COSMETICS[id], own = G.net.owned.includes(id), q = K.feeSplit(K.toU(c.shop)); return { label: `${c.name} ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: 'Limited to ' + se.name, disabled: own, act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.buySeasonItem(G.root, id, now, G.holdU || 0); toast(r.ok ? 'Season item unlocked (sim)' : r.reason); saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] }); }
+  openMenu({ title: 'Seasons', info: () => [SIM(), ...K.SEASONS.map((x) => { const a = K.seasonAccess(x, now, G.holdU || 0); return `${x.name}: ${a.open ? (a.early ? 'HOLDER EARLY ACCESS' : 'open') : 'closed'}`; }), 'Holders (Hound+) get a 2-day early-access weekend.'],
+    items: () => [...se.set.map((id) => { const c = K.COSMETICS[id], own = G.net.owned.includes(id), q = K.feeSplit(K.toU(c.shop)); return { label: `${c.name} ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: 'Limited to ' + se.name, disabled: own, act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.buySeasonItem(G.root, id, now, G.holdU || 0); toast(r.ok ? 'Season item unlocked (sim)' : r.reason); saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] }); }
 function burnMenu() {
-  openMenu({ title: 'Burn for Legends', info: () => [SIM, `Public KIBBLE burned: ${K.fmtK(K.publicBurned(G.root))}`, `You burned: ${K.fmtK(G.net.burnedU || 0)}. Burns have no fee: 100% is burned.`],
-    items: () => [...Object.entries(K.COSMETICS).filter(([, c]) => c.burn).map(([id, c]) => { const own = G.net.owned.includes(id); return { label: `${c.name}  ${own ? 'UNLOCKED' : 'burn ' + c.burn + ' K'}`, disabled: own, act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.burnForLegend(G.root, id); toast(r.ok ? `Burned ${K.fmtK(r.burnedU)} (sim). Legend unlocked!` : r.reason); if (r.ok) { Audio8.sfx('ascend'); burst(pl.x, pl.y - 16, '#ff6a2a', 30, 90); } saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] });
+  openMenu({ title: 'Burn for Legends', info: () => [SIM(), `${K.DEMO ? 'Your demo burns' : 'All Inu games, opt-in burns'}: ${K.fmtK(K.publicBurned(G.root))} KIBBLE`, `You burned: ${K.fmtK(G.net.burnedU || 0)}. OPTIONAL: burned KIBBLE is destroyed, nobody receives it.`],
+    items: () => [...Object.entries(K.COSMETICS).filter(([, c]) => c.burn).map(([id, c]) => { const own = G.net.owned.includes(id); return { label: `${c.name}  ${own ? 'UNLOCKED' : 'burn ' + c.burn + ' K'}`, disabled: own, act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.burnForLegend(G.root, id); toast(r.ok ? `Burned ${K.fmtK(r.burnedU)}${K.DEMO ? ' (demo)' : ''}. Legend unlocked!` : r.reason); if (r.ok) { Audio8.sfx('ascend'); burst(pl.x, pl.y - 16, '#ff6a2a', 30, 90); } saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] });
 }
 function launchMenu() { const q = K.listingQuote();
-  openMenu({ title: 'Fighter Launches (stub)', info: () => [SIM, 'Launch Hall community tokens sponsor a warrior skin.', `Listing: ${K.LISTING_FEE} K fee to treasury + 2% split = ${K.fmtK(q.total)} K`, ...(G.net.launches || []).slice(0, 3).map((l) => `${l.token} sponsors ${l.skin}: ${l.status}`), '$WOOF sponsors Kai Surf skin: live (sample)'],
-    items: [{ label: 'List $PAWS sponsoring "Violet Crackle"', act: async () => { if (!K.getWallet().address) await K.getWallet().connect(); const r = await K.listFighter(G.root, { token: '$PAWS', skin: 'Violet Crackle' }); toast(r.ok ? 'Listing submitted (stub)' : r.reason); saveNet(); await refreshWallet(); } }, { label: 'Back', act: closeMenu }] }); }
+  openMenu({ title: 'Fighter Launches (stub)', info: () => [SIM(), 'Launch Hall community tokens sponsor a warrior skin.', `Listing: ${K.LISTING_FEE} K fee to treasury + 2% split = ${K.fmtK(q.total)} K`, ...(G.net.launches || []).slice(0, 3).map((l) => `${l.token} sponsors ${l.skin}: ${l.status}`), '$WOOF sponsors Kai Surf skin: live (sample)'],
+    items: [{ label: 'List $PAWS sponsoring "Violet Crackle"', act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.listFighter(G.root, { token: '$PAWS', skin: 'Violet Crackle' }); toast(r.ok ? 'Listing submitted (stub)' : r.reason); saveNet(); await refreshWallet(); } }, { label: 'Back', act: closeMenu }] }); }
 
 // ---------------- title ----------------
 function toTitle() { G.state = 'title'; G.mode = 'story'; G.menu = null; G.dialog = null; Audio8.music('title'); titleMenu(); }
 function titleMenu() {
   G.menu = null; const has = !!C.load(STORE);
-  openMenu({ title: '', titleScreen: true, noBack: true, items: () => [...(has ? [{ label: 'Continue', act: () => { G.menu = null; continueGame(); } }] : []), { label: 'New Game', act: () => { G.menu = null; newGame(); } }, { label: 'Wish Network (SIM)', act: () => { G.p = G.p || C.init(C.newPlayer()); networkMenu(); } }] });
+  openMenu({ title: '', titleScreen: true, noBack: true, items: () => [...(has ? [{ label: 'Continue', act: () => { G.menu = null; continueGame(); } }] : []), { label: 'New Game', act: () => { G.menu = null; newGame(); } }, { label: 'Wish Network', act: () => { G.p = G.p || C.init(C.newPlayer()); networkMenu(); } }] });
 }
 
 // ---------------- main update ----------------
@@ -613,7 +628,8 @@ function drawMenu() {
   if (m.titleScreen) { const w = 130, x = Math.floor((VW - w) / 2), y = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)); items.forEach((it, i) => { const sel = i === m.sel; text((sel ? '> ' : '  ') + it.label, x + 10, y + i * 13, sel ? '#ffe066' : '#fff', 9); }); return; }
   const w = Math.min(VW - 12, 330), lineH = 12, h = 22 + info.length * 10 + items.length * lineH + (items[m.sel]?.sub ? 20 : 6), x = Math.floor((VW - w) / 2), y = Math.max(4, Math.floor((VH - h) / 2));
   ctx.fillStyle = 'rgba(10,8,20,.55)'; ctx.fillRect(0, 0, VW, VH); panel(x, y, w, h); text(m.title, x + 10, y + 7, '#ffe066', 9);
-  info.forEach((l, i) => text(l, x + 10, y + 20 + i * 10, l.startsWith('SIM') ? '#ff9ac8' : '#cfc6e6', 7));
+  if (G.shiba && /Wish Network|clear!|complete!/.test(m.title)) { G.shibaC ||= G.shiba.canvas(1); const c = G.shibaC; ctx.drawImage(c, x + w - c.width - 6, y + 4); text(G.shiba.profile.name, x + w - 6 - c.width / 2, y + 8 + c.height, '#ffe066', 6, 'center'); } // your Inu Verse Shiba (shared profile)
+  info.forEach((l, i) => text(l, x + 10, y + 20 + i * 10, /^(DEMO|KIBBLE launching|LIVE)/.test(l) ? '#ff9ac8' : '#cfc6e6', 7));
   const iy = y + 22 + info.length * 10; items.forEach((it, i) => { const sel = i === m.sel; if (sel) R(x + 5, iy + i * lineH - 2, w - 10, lineH, '#4a4068'); text((sel ? '> ' : '  ') + it.label, x + 10, iy + i * lineH, it.disabled ? '#8a84a0' : sel ? '#ffe066' : '#fff8e8', 8); });
   const sub = items[m.sel]?.sub; if (sub) wrap(sub, w - 20, 7).slice(0, 2).forEach((l, i) => text(l, x + 10, iy + items.length * lineH + 3 + i * 9, '#9effa0', 7));
 }

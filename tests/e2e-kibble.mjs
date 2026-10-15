@@ -35,7 +35,7 @@ await openNet('Cate Bounty'); await page.screenshot({ path: 'proof/kibble-07-bou
 check('bounty settles and pays you by contribution', (await G(() => window.__pb.net.wallet.balU)) > bal0);
 // 5) launches
 await openNet('Fighter Launches'); const t0 = await G(() => window.__pb.net.treasuryU); await tap('KeyJ'); await page.waitForTimeout(300); await page.screenshot({ path: 'proof/kibble-08-fighter-launch.png' });
-check('launch listing: fee + 1% to treasury', (await G(() => window.__pb.net.treasuryU)) - t0 === 25250000);
+check('launch listing (demo): fee-inclusive, treasury keeps 25 minus 1% pools', (await G(() => window.__pb.net.treasuryU)) - t0 === 24750000);
 // 6) seasons
 await openNet('Seasons'); await tap('KeyJ'); await page.waitForTimeout(300); await page.screenshot({ path: 'proof/kibble-09-seasons.png' }); check('season item bought', await G(() => window.__pb.net.owned.includes('s1_cap')));
 // 7) burn

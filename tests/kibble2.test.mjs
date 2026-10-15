@@ -23,9 +23,9 @@ test('bounty: settles only when goal met, split by contribution exactly', () => 
   assert.strictEqual(s.net.pools.weekly, 800000); assert.strictEqual(K.contribute(s, 'cate_defeats', 'you', 2), 2);
 });
 test('fighter launch: listing fee to treasury plus the 2% split', async () => {
-  const q = K.listingQuote(); assert.deepStrictEqual([q.total, q.treasuryTotal, q.daily, q.weekly, q.monthly], [25500000, 25250000, 62500, 125000, 62500]);
+  const q = K.listingQuote(); assert.deepStrictEqual([q.total, q.treasuryTotal, q.daily, q.weekly, q.monthly], [25000000, 24750000, 62500, 125000, 62500]);
   const s = {}, w = new K.SimWallet({ balU: K.toU(100) }); assert.strictEqual((await K.listFighter(s, { token: 'bad token!', skin: 'x' }, w)).ok, false);
-  const r = await K.listFighter(s, { token: 'WOOF', skin: 'aura_violet' }, w); assert.ok(r.ok); assert.strictEqual(s.net.treasuryU, 25250000); assert.strictEqual(await w.balanceU(), K.toU(100) - 25500000);
+  const r = await K.listFighter(s, { token: 'WOOF', skin: 'aura_violet' }, w); assert.ok(r.ok); assert.strictEqual(s.net.treasuryU, 24750000); assert.strictEqual(await w.balanceU(), K.toU(100) - 25000000);
 });
 test('seasons: open window and holder early access weekend', async () => {
   const S1 = K.SEASONS[0], before = S1.start - 864e5;
