@@ -114,9 +114,11 @@ async function mobile(label, device, landscape) {
   const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], i) => ({ x, y, id: i + 1 })) });
   const box = async (sel) => { const b = await page.locator(sel).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2, b]; };
   const tapBtn = async (sel, ms = 80) => { const [x, y] = await box(sel); await touch('touchStart', [[x, y]]); await page.waitForTimeout(ms); await touch('touchEnd', []); await page.waitForTimeout(60); };
-  check(`${label}: touch controls visible`, await page.locator('#stick').isVisible() && await page.locator('[data-act=atk]').isVisible());
+  const ctrlVis = async () => await page.locator('#stick').isVisible() && await page.locator('[data-act=atk]').isVisible();
+  if (landscape) check(`${label}: controls hidden on title (landscape)`, !(await ctrlVis())); else check(`${label}: touch controls visible`, await ctrlVis());
   await page.screenshot({ path: `proof/${label}-01-title.png` });
-  await tapBtn('[data-act=atk]'); await page.waitForTimeout(400); check(`${label}: A button starts game`, (await S(page)).state === 'play');
+  if (landscape) { const vp2 = page.viewportSize(); await touch('touchStart', [[vp2.width / 2, vp2.height - 15]]); await page.waitForTimeout(60); await touch('touchEnd', []); } else await tapBtn('[data-act=atk]');
+  await page.waitForTimeout(400); if (landscape) check(`${label}: controls visible in play`, await ctrlVis()); check(`${label}: ${landscape ? 'tap' : 'A button'} starts game`, (await S(page)).state === 'play');
   for (let i = 0; i < 12 && (await S(page)).dialog; i++) await tapBtn('[data-act=atk]', 50);
   // drag the thumb stick up
   const [sx, sy] = await box('#stick'); const s0 = await S(page);

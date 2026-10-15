@@ -47,7 +47,7 @@ function setupTouch() {
   const end = (e) => { if (e.pointerId !== sid) return; sid = null; stick.x = stick.y = 0; knob.style.transform = ''; };
   base.addEventListener('pointerup', end); base.addEventListener('pointercancel', end);
   for (const b of document.querySelectorAll('[data-act]')) { const a = b.dataset.act;
-    b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on'); press(a); });
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on'); press(a); if (navigator.vibrate) try { navigator.vibrate(a === 'atk' ? 6 : 10); } catch {} });
     const up = () => { b.classList.remove('on'); release(a); }; b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up); }
   addEventListener('touchstart', () => document.body.classList.add('touch'), { passive: true, once: true });
   if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
@@ -57,7 +57,7 @@ setupTouch();
 
 // ---------------- sizing: crisp integer scale ----------------
 function resize() {
-  DPR = window.devicePixelRatio || 1; const r = cv.getBoundingClientRect(); const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
+  DPR = Math.min(2, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
   cv.width = w; cv.height = h; SCALE = Math.max(1, Math.floor(Math.min(w, h) / 230)); VW = Math.ceil(w / SCALE); VH = Math.ceil(h / SCALE);
   ctx.imageSmoothingEnabled = false;
 }
@@ -606,8 +606,14 @@ function drawWish(ox, oy) {
   ctx.globalAlpha = rise; for (let i = 0; i < 7; i++) { const a = G.t * 1.5 + i / 7 * 6.28; ctx.drawImage(A.orbs[i], Math.round(20 * TILE - 7 + Math.cos(a) * 70 - ox), Math.round(py + 50 + Math.sin(a) * 22)); }
   ctx.drawImage(img, Math.round(px), Math.round(py)); ctx.globalAlpha = 1;
 }
+let _rxT = -1, _rx = 0;
+function hudRightInset() { // keep orbs/bones/timer clear of the DOM menu button in landscape touch
+  if (!document.body.classList.contains('touch') || VW <= VH) return 0;
+  if (G.t - _rxT > 1 || _rxT < 0) { _rxT = G.t; const mb = document.getElementById('menuBtn').getBoundingClientRect(), cr = cv.getBoundingClientRect(); _rx = Math.max(0, Math.ceil((cr.right - mb.left + 4) * DPR / SCALE)); }
+  return _rx;
+}
 function drawHUD() {
-  const p = P(), d = D(), bx = 6, by = 6, rx = document.body.classList.contains('touch') && VW > VH ? 22 : 0;
+  const p = P(), d = D(), bx = 6, by = 6, rx = hudRightInset();
   panel(bx, by, 118, 34); text(`Lv ${p.level}`, bx + 6, by + 5, '#ffe066', 8);
   const bar = (y, v, max, c1, c2, label) => { R(bx + 32, y, 80, 7, '#1a1420'); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 5, c1); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 1, c2); text(label, bx + 6, y - 1, '#fff', 7); };
   bar(by + 15, p.hp, d.maxHp, '#ff5f6d', '#ffb0b8', 'HP'); bar(by + 24, p.energy, d.maxEnergy, pl.ascend ? '#ffe066' : '#5cc8ff', '#ffffff', pl.stage ? 'A' + pl.stage : 'EN');
@@ -644,7 +650,7 @@ function drawTitle() {
   drawText(ctx, "CATE'S FURY", VW / 2, ty + 9 * ls + 2, '#ff8fc8', Math.max(1, ls - 2), 'center', '#1a1420', true); void sz; G.titleMenuY = ty + 9 * ls + 9 * Math.max(1, ls - 2) + 10;
   const hero = heroFrame('golden', Math.floor(G.t / 2.5) % 4, 'right', Math.floor(G.t * 8) % 4, 'walk', HERO_EQ.hoodie); { const st = Math.floor(G.t / 2.5) % 4; if (st) drawAura(Math.round(VW * 0.18) + 16, Math.round(VH * 0.8), st, STAGES[st].aura); ctx.drawImage(hero, Math.round(VW * 0.18), Math.round(VH * 0.8) - FORM_H + 2); if (st >= 2) drawBolts(Math.round(VW * 0.18) + 16, Math.round(VH * 0.8), 2); }
   const cate = A.cate[Math.floor(G.t * 4) % 2]; ctx.drawImage(cate, Math.round(VW * 0.82) - 32, Math.round(VH * 0.8) - 56);
-  if (Math.floor(G.t * 2) % 2) text('Press J / tap to start', VW / 2, VH - 14, '#fff8e8', 7, 'center');
+  if (Math.floor(G.t * 2) % 2) text(document.body.classList.contains('touch') ? 'Tap to start' : 'Press J / tap to start', VW / 2, VH - 14, '#fff8e8', 7, 'center');
   text('Original fan-made game. Wish Network features are simulated.', VW / 2, VH - 24, '#e8c8e8', 6, 'center', null);
 }
 function render() {
@@ -660,5 +666,8 @@ function render() {
 let last = performance.now();
 function frame(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; try { update(dt); render(); } catch (e) { console.error(e); window.__pbErr = String(e.stack || e); } for (const k in pressed) pressed[k] = false; requestAnimationFrame(frame); }
 resize(); toTitle(); requestAnimationFrame(frame);
-cv.addEventListener('pointerdown', () => { Audio8.unlock(); if (G.state === 'title' && G.menu?.titleScreen) press('atk'), setTimeout(() => release('atk'), 50); });
+cv.addEventListener('pointerdown', (e) => { Audio8.unlock(); if (G.state === 'title' && G.menu?.titleScreen) {
+  const r = cv.getBoundingClientRect(), gy = (e.clientY - r.top) * DPR / SCALE, y0 = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)), m = G.menu, n = (m._items || (typeof m.items === 'function' ? m.items() : m.items)).length, i = Math.floor((gy - y0 + 3) / 13);
+  if (i >= 0 && i < n) m.sel = i; press('atk'); setTimeout(() => release('atk'), 50); } });
+setInterval(() => document.body.classList.toggle('title', G.state === 'title'), 150);
 G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb;
