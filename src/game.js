@@ -675,3 +675,5 @@ cv.addEventListener('pointerdown', (e) => { Audio8.unlock(); if (G.state === 'ti
   if (i >= 0 && i < n) m.sel = i; press('atk'); setTimeout(() => release('atk'), 50); } });
 setInterval(() => document.body.classList.toggle('title', G.state === 'title'), 150);
 G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb; G.LILY_COUNT = C.LILY_COUNT; G.GAME_TITLE = GAME_TITLE;
+// 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.
+globalThis.__inuHome = { busy: () => G.state !== 'title' ? 'Go back to Inu Verse? Your story is saved first.' : false, save: () => { try { saveGame(true); } catch {} } };

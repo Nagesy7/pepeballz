@@ -52,6 +52,7 @@ export async function initKibble(apiBase = 'https://kibble-pay.vercel.app') {
   const K = await glue.initKibble({ game: GAME, apiBase }); mode = K.mode; document.getElementById('inu-legal')?.remove(); glue.mountFooter(K.mode);
   // Connect Wallet (title + in-game): story save + network progress saved to the wallet; tiers read the real on-chain balance.
   const js = (g) => { try { return JSON.parse(g('pepeballz.save.v1') || 'null'); } catch { return null; } };
+  glue.mountHome?.(); // 🏠 Back to Inu Verse (title/pause/results; confirms + saves via globalThis.__inuHome)
   walletUi = glue.mountWallet(K, { game: GAME, keys: ['pepeballz.save.v1', 'pepeballz.net.v1'], position: 'top-right',
     progress: (g) => { const p = js(g); return p ? (p.level || 0) * 1000 + (p.xp || 0) : 0; }, label: (g) => { const p = js(g); return p ? `Level ${p.level || 1} · ${p.area || 'village'}` : ''; },
     onWallet: (w) => { try { dispatchEvent(new CustomEvent('pepe:wallet', { detail: w })); } catch {} } });
