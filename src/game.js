@@ -80,6 +80,7 @@ loadNet();
 if (K.DEMO) K.setWallet(new K.SimWallet(G.net.wallet));
 else { // real mode: purchased / burned cosmetics come only from the wallet's server inventory
   G.net.owned = G.net.owned.filter((id) => !K.COSMETICS[id]?.shop && !K.COSMETICS[id]?.burn); K.setWallet(K.pendingWallet()); }
+addEventListener('pepe:wallet', (e) => { if (e.detail?.address) refreshWallet().catch?.(() => {}); });
 K.initKibble().then(() => { if (K.getWallet().address) refreshWallet(); }).catch(() => {});
 function saveGame(quiet) { if (G.mode !== 'story') return; G.p.area = G.area.id; G.p.x = pl.x; G.p.y = pl.y; C.save(STORE, G.p); saveNet(); if (!quiet) toast('Game saved'); }
 const toast = (msg, t = 2) => { G.toast = { msg, t }; };

@@ -45,10 +45,16 @@ export function realWallet(sdk) { const w = sdk.asPepeBallzWallet(), live = () =
     async transfer(o) { return live() ? w.transfer({ itemId: o.itemId || o.memo }) : { ok: false, reason: SOON_MSG }; },
     async burn(o) { return live() ? w.burn(o) : { ok: false, reason: SOON_MSG }; },
     async inventory() { return (await sdk.inventory(GAME))?.[GAME] || {}; } }; }
+export let walletUi = null;
 export async function initKibble(apiBase = 'https://kibble-pay.vercel.app') {
   glue = await import(apiBase + '/inu-games.js'); glue.mountFooter(DEMO ? 'demo' : 'soon');
   if (DEMO) return { mode };
   const K = await glue.initKibble({ game: GAME, apiBase }); mode = K.mode; document.getElementById('inu-legal')?.remove(); glue.mountFooter(K.mode);
+  // Connect Wallet (title + in-game): story save + network progress saved to the wallet; tiers read the real on-chain balance.
+  const js = (g) => { try { return JSON.parse(g('pepeballz.save.v1') || 'null'); } catch { return null; } };
+  walletUi = glue.mountWallet(K, { game: GAME, keys: ['pepeballz.save.v1', 'pepeballz.net.v1'], position: 'top-right',
+    progress: (g) => { const p = js(g); return p ? (p.level || 0) * 1000 + (p.xp || 0) : 0; }, label: (g) => { const p = js(g); return p ? `Level ${p.level || 1} · ${p.area || 'village'}` : ''; },
+    onWallet: (w) => { try { dispatchEvent(new CustomEvent('pepe:wallet', { detail: w })); } catch {} } });
   if (K.kp) { kp = K.kp; setWallet(realWallet(kp)); refreshServer().catch(() => {}); } return K; }
 export async function refreshServer() { if (!kp) return; const P = await kp.pools(); serverPools = P.pools; serverBurnedU = Number(P.burnedAllBaseUnits || 0);
   for (const pool of ['daily', 'weekly', 'monthly']) serverBoards[pool] = (await kp.scores(GAME, pool)).entries; }
