@@ -105,8 +105,8 @@ function enterArea(id, tx, ty) {
   if (G.mode === 'story') { P().area = id; saveGame(true); }
 }
 function newGame() { G.mode = 'story'; G.p = C.init(C.newPlayer()); pl.stage = 0; Object.assign(pl, { inv: 0, dir: 0 }); enterArea('village', 20.5, 18); G.state = 'play';
-  say([['Elder Hachi', 'Shiba! Wake up, pup. Something pink and hungry crawled down from Fang Peak last night.'], ['Elder Hachi', 'Come see me by the old pond basin, north of the square.']]); }
-function continueGame() { const p = C.load(STORE); if (!p) return newGame(); G.mode = 'story'; G.p = p; enterArea(p.area, p.x / TILE, p.y / TILE); G.state = 'play'; toast('Welcome back, Shiba'); }
+  say([['Elder Hachi', 'Woof! Wake up, pup. Cate the Catnip Queen crept down from Fang Peak last night and pawed off with the pack\'s kibble stash.'], ['Elder Hachi', 'Come see me by the old pond basin, north of the square.']]); }
+function continueGame() { const p = C.load(STORE); if (!p) return newGame(); G.mode = 'story'; G.p = p; enterArea(p.area, p.x / TILE, p.y / TILE); G.state = 'play'; toast('Welcome back, Shiba. Woof!'); }
 
 // ---------------- dialog (typewriter) ----------------
 function say(lines, done) { G.dialog = { lines, i: 0, ch: 0, done }; }
@@ -167,19 +167,19 @@ function updateNPCs(dt) {
 // ---------------- NPC talk ----------------
 const TALK = {
   elder: () => { const f = P().flags;
-    if (!f.metElder) return say([['Elder Hachi', 'Our village pond has run dry since Cate stomped down from Fang Peak. Its five Pond Lilies blew away across the land.'], ['Elder Hachi', 'Each lily is a different colour, and each one makes whoever carries it a little stronger.'], ['Elder Hachi', 'Take this Rose Lily. Find the other four in the village, Whisker Woods and on Fang Peak, then bring them to the basin to restore the pond.']], () => { f.metElder = true; giveOrb(1); });
+    if (!f.metElder) return say([['Elder Hachi', 'Woof. Our village pond has run dry since Cate came down from Fang Peak. Its five Pond Lilies blew away across the land.'], ['Elder Hachi', 'Each lily is a different colour, and each one makes whoever carries it a little stronger.'], ['Elder Hachi', 'Take this Rose Lily. Find the other four in the village, Whisker Woods and on Fang Peak, then bring them to the basin to restore the pond.']], () => { f.metElder = true; giveOrb(1); });
     if (P().orbs.length >= C.LILY_COUNT) return say([['Elder Hachi', 'All five lilies! Set them in the basin and the pond will fill again.']]);
     say([['Elder Hachi', `You carry ${P().orbs.length} of ${C.LILY_COUNT} Pond Lilies. East to the woods, north to the peak.`]]); },
   akita: () => say([['Akita Ren', 'Feel that hum in your fur? That is Unleash. Press Q or the ▲ button and let your coat glow.'], ['Akita Ren', 'You hit harder and take less, but it burns energy fast. Hold C to rest and catch your breath.']]),
   kai: () => say([['Kai', 'Tap J three times for a full combo. The third hit sends foes flying.'], ['Kai', 'K lets out a Howl Wave. Howl right after resting for a big one. Space dashes through attacks.']]),
-  merchant: () => say([['Biscuit Bram', 'Fresh biscuits! Bones only. Pink blobs drop them when you bonk them.']], shopMenu),
-  pup: () => say([['Pip', 'When I grow up I want to Unleash too! My tail already glows a little. Probably.']]),
+  merchant: () => say([['Biscuit Bram', 'Fresh biscuits! Bones only. Cate\'s tabby kits drop them when you bonk them.'], ['Biscuit Bram', 'Fancy coats and auras? Rin\'s Pond Shop takes $KIBBLE. Cosmetic only, every pup plays fair.']], shopMenu),
+  pup: () => say([['Pip', 'Arf! When I grow up I want to Unleash too! My tail already glows a little. Probably.']]),
   rin: () => { const f = P().flags; const lines = [['Rin', 'I built a Pond Network terminal! Weekly lily hunts, a Cate boss rush, leaderboards...'], ['Rin', 'It runs on simulated KIBBLE for now. Prizes go by rank, never by luck, and entry is free.']];
     if (!f.rinGift) { lines.push(['Rin', 'Here, take some Lily Tea for the road.']); return say(lines, () => { f.rinGift = true; C.addItem(P(), 'tea', 2); Audio8.sfx('pickup'); toast('Got Lily Tea x2'); networkMenu(); }); }
     say(lines, networkMenu); },
   tomo: () => say([['Old Tomo', 'When the pond was full, an old toad called Pondo kept it clean. Grumpy, warty, kind.'], ['Old Tomo', 'Fill it again and maybe he will come home.']]),
-  shiro: () => say([['Scout Shiro', 'Careful. Those pink kittens wander back to Cate, and a good cuddle heals her right up.'], ['Scout Shiro', 'Thin them out before you face her. The peak is north.']]),
-  aki: () => say([['Ranger Aki', P().flags.cateDown ? 'You beat her! Though... that blob left a trail heading somewhere bigger.' : 'Cate is up at the summit. Watch for her pounce: she crouches first. Dash through it!']]),
+  shiro: () => say([['Scout Shiro', 'Careful. Those tabby kits wander back to Cate, and a good cuddle heals her right up.'], ['Scout Shiro', 'Thin them out before you face her. The peak is north.']]),
+  aki: () => say([['Ranger Aki', P().flags.cateDown ? 'You beat her! Though... those royal pawprints head somewhere bigger.' : 'Cate is up at the summit. Watch for her pounce: she crouches first. Dash through it!']]),
 };
 function tryInteract() {
   const [fx, fy] = DV[pl.dir], tx = pl.x + fx * 12, ty = pl.y - 4 + fy * 12;
@@ -234,7 +234,7 @@ function hitEnemy(e, dmg, ang, kb, isBoss) {
 }
 function killEnemy(e) {
   if (e.type === 'ghost') { e.dead = true; burst(e.x, e.y - 12, '#d0c0ff', 30, 100); return tourneyResult(true); }
-  burst(e.x, e.y - 6, e.type === 'kitten' ? '#ff8fc8' : e.type === 'boar' ? '#b07a52' : '#bdb8b0', 18); Audio8.sfx('hit3'); e.dead = true;
+  burst(e.x, e.y - 6, e.type === 'kitten' ? '#e0a060' : e.type === 'boar' ? '#b07a52' : '#bdb8b0', 18); Audio8.sfx('hit3'); e.dead = true;
   if (G.mode !== 'story') return;
   const ups = C.gainXp(P(), e.T.xp); P().bones += e.T.bones; float(e.x, e.y - 24, `+${e.T.xp}xp  +${e.T.bones} bones`, '#9effa0');
   if (Math.random() < 0.12) G.drops.push({ x: e.x, y: e.y, id: 'bone', t: 12 });
@@ -303,15 +303,15 @@ function updateShots(dt) {
   G.shots = G.shots.filter((s) => s.t > 0);
 }
 
-// ---------------- Cate, form 1 ----------------
+// ---------------- Cate, the Catnip Queen ----------------
 function startBoss(intro = true) {
   const a = W.mountain.boss; G.boss = { x: a.x * TILE, y: a.y * TILE, hp: 700, max: 700, st: 'intro', t: 0, cd: 1, vx: 0, vy: 0, flash: 0, lock: true, seq: 0 };
   if (G.mode === 'rush') { G.boss.hp = G.boss.max = 900; }
   Audio8.music('boss'); Audio8.sfx('meow'); G.shake = 0.4;
-  const go = () => { G.boss.st = 'hop'; G.boss.t = 0; G.banner = { text: 'CATE  -  FORM 1', t: 2 }; };
-  if (intro) say([['Cate', 'Mrrrowww~! A little doggy came all the way up here? How snackable!'], ['Cate', 'Every kitten I cuddle makes me stronger. Let\'s see how you taste!']], go); else go();
+  const go = () => { G.boss.st = 'hop'; G.boss.t = 0; G.banner = { text: 'CATE, THE CATNIP QUEEN', t: 2 }; };
+  if (intro) say([['Cate', 'Mrrrowww~! A little doggy came all the way up here? This kibble is MINE now.'], ['Cate', 'Every kit I cuddle makes me stronger. Let\'s see how well you fetch!']], go); else go();
 }
-function bossShootRing(n, sp) { const b = G.boss, off = Math.random(); for (let i = 0; i < n; i++) { const a = (i + off) / n * 6.283; G.shots.push({ x: b.x, y: b.y - 16, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4, dmg: 12, t: 3, col: '#ff7bd5' }); } Audio8.sfx('blast'); }
+function bossShootRing(n, sp) { const b = G.boss, off = Math.random(); for (let i = 0; i < n; i++) { const a = (i + off) / n * 6.283; G.shots.push({ x: b.x, y: b.y - 16, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4, dmg: 12, t: 3, col: '#b8a0d8' }); } Audio8.sfx('blast'); }
 function updateBoss(dt) {
   const b = G.boss; if (!b || b.hp <= 0) return; b.t += dt; b.flash -= dt; if (b.st === 'intro') return;
   const rage = b.hp < b.max / 2, dx = pl.x - b.x, dy = pl.y - b.y, dist = Math.hypot(dx, dy) || 1, k = rage ? 1.35 : 1;
@@ -319,16 +319,16 @@ function updateBoss(dt) {
   if (b.st === 'hop') { const sp = 38 * k * (Math.sin(b.t * 7) > 0 ? 1.6 : 0.3); moveBody(b, dx / dist * sp * dt, dy / dist * sp * dt, 14, 6); if (b.t > 2.2) next(); }
   else if (b.st === 'spit') { if (b.t > 0.5 && !b.s1) { b.s1 = 1; bossShootRing(rage ? 16 : 12, 85); } if (rage && b.t > 1.1 && !b.s2) { b.s2 = 1; bossShootRing(16, 70); } if (b.t > 1.6) { b.s1 = b.s2 = 0; next(); } }
   else if (b.st === 'pounce') { if (b.t < 0.7) { b.tx = pl.x; b.ty = pl.y; } else if (b.t < 1.25) { if (!b.pv) { const a = Math.atan2(b.ty - b.y, b.tx - b.x); b.vx = Math.cos(a) * 240 * k; b.vy = Math.sin(a) * 240 * k; b.pv = 1; Audio8.sfx('meow'); } moveBody(b, b.vx * dt, b.vy * dt, 14, 6); } else { b.pv = 0; G.shake = 0.2; burst(b.x, b.y, '#ffffff', 14); next(); } }
-  else if (b.st === 'summon') { if (b.t > 0.6 && !b.s1) { b.s1 = 1; for (let i = 0; i < (rage ? 3 : 2); i++) { const e = spawnEnemy('kitten', b.x + (i - 1) * 30, b.y + 20); e.st = 'chase'; burst(e.x, e.y, '#ff8fc8', 10); } Audio8.sfx('meow'); } if (b.t > 1.4) { b.s1 = 0; next(); } }
+  else if (b.st === 'summon') { if (b.t > 0.6 && !b.s1) { b.s1 = 1; for (let i = 0; i < (rage ? 3 : 2); i++) { const e = spawnEnemy('kitten', b.x + (i - 1) * 30, b.y + 20); e.st = 'chase'; burst(e.x, e.y, '#e0a060', 10); } Audio8.sfx('meow'); } if (b.t > 1.4) { b.s1 = 0; next(); } }
   // absorb nearby kittens to heal
-  for (const e of G.enemies) if (!e.dead && e.type === 'kitten' && Math.hypot(e.x - b.x, e.y - b.y) < 24 && b.st !== 'summon') { e.dead = true; b.hp = Math.min(b.max, b.hp + 45); float(b.x, b.y - 48, 'PURR! +45', '#ff7bd5'); burst(b.x, b.y - 16, '#ff8fc8', 20); Audio8.sfx('meow'); }
+  for (const e of G.enemies) if (!e.dead && e.type === 'kitten' && Math.hypot(e.x - b.x, e.y - b.y) < 24 && b.st !== 'summon') { e.dead = true; b.hp = Math.min(b.max, b.hp + 45); float(b.x, b.y - 48, 'PURR! +45', '#d8a050'); burst(b.x, b.y - 16, '#e0a060', 20); Audio8.sfx('meow'); }
   if (Math.hypot(dx, dy + 8) < 24) hurtPlayer(b.st === 'pounce' ? 22 : 16, b.x, b.y);
 }
 function bossDown() {
-  const b = G.boss; b.st = 'down'; G.enemies.forEach((e) => (e.dead = true)); G.shots = []; burst(b.x, b.y - 16, '#ff8fc8', 60, 140); G.shake = 0.6; Audio8.sfx('die');
+  const b = G.boss; b.st = 'down'; G.enemies.forEach((e) => (e.dead = true)); G.shots = []; burst(b.x, b.y - 16, '#e0a060', 60, 140); G.shake = 0.6; Audio8.sfx('die');
   if (G.mode === 'rush') { b.lock = false; K.contribute(G.root, 'cate_defeats', 'you'); return finishRun(); }
   const ups = C.gainXp(P(), 150); P().bones += 60; P().flags.cateDown = true; K.contribute(G.root, 'cate_defeats', 'you'); saveNet();
-  say([['Cate', 'Mrrp?! You... ruffled my perfect fur!'], ['Cate', 'Fine! I\'ll go find a comfier throne. This isn\'t over, doggy!'], ['Shiba', 'She dropped something glowing...']],
+  say([['Cate', 'Mrrp?! You... ruffled my perfect fur!'], ['Cate', 'Fine! Keep your crunchy kibble. I\'ll find a comfier throne. This isn\'t over, doggy!'], ['Shiba', 'Woof! She dropped the pack\'s kibble... and something glowing.']],
     () => { G.boss = null; Audio8.music('mountain'); if (!P().orbs.includes('orb5')) G.area.pickups.push({ key: 'orb5', kind: 'orb', n: 5, x: b.x / TILE, y: b.y / TILE }); G.banner = { text: ups ? `Cate defeated!  Lv ${P().level}` : 'Cate defeated!', t: 3 }; saveGame(true); });
 }
 
@@ -540,7 +540,9 @@ function line(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.ab
 const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
 function text(s, x, y, col = '#fff', size = 8, align = 'left', shadow = '#1a1420') { drawText(ctx, s, x, y, col, size >= 14 ? 2 : 1, align, shadow); }
 function wrap(s, maxW) { const out = []; let line = ''; for (const w of String(s).split(' ')) { const t = line ? line + ' ' + w : w; if (measure(t) > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
-function panel(x, y, w, h) { R(x, y, w, h, '#1a1420'); R(x + 1, y + 1, w - 2, h - 2, '#f6e7c8'); R(x + 2, y + 2, w - 4, h - 4, '#2b2440'); R(x + 3, y + 3, w - 6, 1, '#4a4068'); }
+function panel(x, y, w, h) { R(x, y, w, h, '#1a1420'); R(x + 1, y + 1, w - 2, h - 2, '#f6e7c8'); R(x + 2, y + 2, w - 4, h - 4, '#2b2440'); R(x + 3, y + 3, w - 6, 1, '#d8a050'); } // kibble-gold accent line
+// tiny 5x5 pawprint (Inu UI accent)
+function paw(x, y, col) { R(x + 1, y + 2, 3, 3, col); R(x, y, 1, 1, col); R(x + 2, y - 1, 1, 1, col); R(x + 4, y, 1, 1, col); }
 function drawWorld() {
   const a = G.area, sx = G.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * G.shake * 5) : 0, sy = G.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * G.shake * 5) : 0;
   const cx = Math.round(Math.max(0, Math.min(a.w * TILE - VW, pl.x - VW / 2))) - sx, cy = Math.round(Math.max(0, Math.min(a.h * TILE - VH, pl.y - 12 - VH / 2))) - sy;
@@ -614,14 +616,14 @@ function hudRightInset() { // keep orbs/bones/timer clear of the DOM menu button
 }
 function drawHUD() {
   const p = P(), d = D(), bx = 6, by = 6, rx = hudRightInset();
-  panel(bx, by, 118, 34); text(`Lv ${p.level}`, bx + 6, by + 5, '#ffe066', 8);
+  panel(bx, by, 118, 34); text(`Lv ${p.level}`, bx + 6, by + 5, '#ffe066', 8); paw(bx + 106, by + 5, '#d8a050');
   const bar = (y, v, max, c1, c2, label) => { R(bx + 32, y, 80, 7, '#1a1420'); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 5, c1); R(bx + 33, y + 1, Math.max(0, Math.round(78 * Math.min(1, v / max))), 1, c2); text(label, bx + 6, y - 1, '#fff', 7); };
   bar(by + 15, p.hp, d.maxHp, '#ff5f6d', '#ffb0b8', 'HP'); bar(by + 24, p.energy, d.maxEnergy, pl.ascend ? '#ffe066' : '#5cc8ff', '#ffffff', pl.stage ? 'A' + pl.stage : 'EN');
   R(bx + 33, by + 12, Math.round(78 * p.xp / C.xpToNext(p.level)), 1, '#9effa0');
   if (G.mode === 'hunt') { for (let i = 0; i < C.LILY_COUNT; i++) { ctx.globalAlpha = i < G.hunt.got.length ? 1 : 0.25; ctx.drawImage(A.orbs[i], VW - 80 - rx + i * 14, 8); } ctx.globalAlpha = 1; }
-  else if (G.mode === 'story') { for (let i = 0; i < C.LILY_COUNT; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 80 - rx + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8 - rx, 24, '#fff4e0', 7, 'right'); }
+  else if (G.mode === 'story') { for (let i = 0; i < C.LILY_COUNT; i++) { ctx.globalAlpha = p.orbs.includes('orb' + (i + 1)) ? 1 : 0.22; ctx.drawImage(A.orbs[i], VW - 80 - rx + i * 14, 8); } ctx.globalAlpha = 1; text(`${p.bones} bones`, VW - 8 - rx, 24, '#fff4e0', 7, 'right'); ctx.drawImage(A.bone, Math.round(VW - 8 - rx - measure(`${p.bones} bones`) - 15), 23); }
   if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : G.mode === 'tourney' ? 'TOURNEY' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8 - rx, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
-  const b = G.boss; if (b && b.st !== 'intro' && b.st !== 'down') { const w = Math.min(220, VW - 40), x = (VW - w) / 2, y = VH - 18; R(x - 1, y - 1, w + 2, 9, '#1a1420'); R(x, y, Math.round(w * b.hp / b.max), 7, '#ff7bd5'); R(x, y, Math.round(w * b.hp / b.max), 2, '#ffd0e6'); text('CATE', x, y - 10, '#ffd0e6', 8); }
+  const b = G.boss; if (b && b.st !== 'intro' && b.st !== 'down') { const w = Math.min(220, VW - 40), x = (VW - w) / 2, y = VH - 18; R(x - 1, y - 1, w + 2, 9, '#1a1420'); R(x, y, Math.round(w * b.hp / b.max), 7, '#d8a050'); R(x, y, Math.round(w * b.hp / b.max), 2, '#f6e0b0'); text('CATE', x, y - 10, '#f6e0b0', 8); }
 }
 function drawDialog() {
   const d = G.dialog, [name, line] = d.lines[d.i], w = Math.min(VW - 12, 360), h = 56, x = Math.floor((VW - w) / 2), y = VH - h - 6;
@@ -647,7 +649,8 @@ function drawTitle() {
   const toad = A.toad[Math.floor(G.t) % 5 === 0 ? 1 : 0]; ctx.globalAlpha = 0.9; ctx.drawImage(toad, Math.round(VW / 2 - 60), Math.round(VH * 0.06 - 14 + Math.sin(G.t * 1.5) * 3)); ctx.globalAlpha = 1;
   const ty = Math.round(VH * 0.06 + 70); const sz = Math.min(34, Math.floor(VW / 8));
   const ls = Math.max(2, Math.min(5, Math.floor(VW / 60))); drawText(ctx, GAME_TITLE.toUpperCase(), VW / 2, ty, '#ffe066', ls, 'center', '#1a1420', true);
-  drawText(ctx, GAME_SUBTITLE.toUpperCase(), VW / 2, ty + 9 * ls + 2, '#ff8fc8', Math.max(1, ls - 2), 'center', '#1a1420', true); void sz; G.titleMenuY = ty + 9 * ls + 9 * Math.max(1, ls - 2) + 10;
+  drawText(ctx, GAME_SUBTITLE.toUpperCase(), VW / 2, ty + 9 * ls + 2, '#e0a060', Math.max(1, ls - 2), 'center', '#1a1420', true); void sz; { const tgY = ty + 9 * ls + 9 * Math.max(1, ls - 2) + 6; text('AN INU PACK ADVENTURE  -  $KIBBLE COSMETICS', VW / 2, tgY, '#f6c94c', 7, 'center'); paw(VW / 2 - measure('AN INU PACK ADVENTURE  -  $KIBBLE COSMETICS') / 2 - 10, tgY, '#f6c94c'); paw(VW / 2 + measure('AN INU PACK ADVENTURE  -  $KIBBLE COSMETICS') / 2 + 4, tgY, '#f6c94c'); G.titleMenuY = tgY + 14; }
+  for (let i = 0; i < 9; i++) { const px2 = Math.round(VW * 0.24 + i * VW * 0.055), py2 = Math.round(VH * 0.8 + (i % 2 ? 3 : -3)); if ((G.t * 3 - i) % 12 > 0) paw(px2, py2, 'rgba(26,20,32,.45)'); } // pawprint trail
   const hero = heroFrame('golden', Math.floor(G.t / 2.5) % 4, 'right', Math.floor(G.t * 8) % 4, 'walk', HERO_EQ.hoodie); { const st = Math.floor(G.t / 2.5) % 4; if (st) drawAura(Math.round(VW * 0.18) + 16, Math.round(VH * 0.8), st, STAGES[st].aura); ctx.drawImage(hero, Math.round(VW * 0.18), Math.round(VH * 0.8) - FORM_H + 2); if (st >= 2) drawBolts(Math.round(VW * 0.18) + 16, Math.round(VH * 0.8), 2); }
   const cate = A.cate[Math.floor(G.t * 4) % 2]; ctx.drawImage(cate, Math.round(VW * 0.82) - 32, Math.round(VH * 0.8) - 56);
   if (Math.floor(G.t * 2) % 2) text(document.body.classList.contains('touch') ? 'Tap to start' : 'Press J / tap to start', VW / 2, VH - 14, '#fff8e8', 7, 'center');

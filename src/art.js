@@ -41,21 +41,29 @@ export const TALL = { T: 'canopy', P: 'pine' };
 const [canopy, cg] = mk(26, 24); seed = 99; blob(cg, 13, 11, 12, 10.5, '#3f9a3a', '#2d7430', '#6cc456', '#1c4a20'); for (let i = 0; i < 16; i++) px(cg, 5 + rnd() * 16 | 0, 4 + rnd() * 12 | 0, rnd() < .5 ? '#5ab64a' : '#2d7430');
 const [pine, pg] = mk(24, 28); for (let i = 0; i < 4; i++) blob(pg, 12, 5 + i * 5, 4 + i * 2.6, 4, i % 2 ? '#2f7a52' : '#36885c', '#215a3c', '#e8f2f8', '#123824');
 export const tall = { canopy, pine };
+// Cate, the Catnip Queen: original upright grey tabby queen (stripes, cream bib, gold crown, plum cape, curled tail). Same 64x58 cell.
 function cate(sq, angry) {
-  const [c, g] = mk(64, 58); const ry = 17 - sq * 3, rx = 22 + sq * 3, cy = 38 + sq * 3;
-  for (let i = 0; i < 14; i++) blob(g, 51 + Math.sin(i / 3) * 3 + i * 0.5, cy - i * 1.5, 2.6, 2.6, '#ff8fc8', '#e0609f', null, i > 11 ? '#7a1f4f' : null);
-  for (const s of [-1, 1]) for (let y = 0; y < 10; y++) for (let x = 0; x <= 9 - y; x++) px(g, Math.round(32 + s * 12 + x - (9 - y) / 2), cy - ry + 4 - y, x === 0 || x === 9 - y ? '#7a1f4f' : (x > 2 && x < 7 - y ? '#ffd0e6' : '#ff8fc8'));
-  blob(g, 32, cy, rx, ry, '#ff8fc8', '#e0609f', '#ffd0e6', '#7a1f4f'); blob(g, 32, cy + 7, rx * 0.55, ry * 0.4, '#ffc2df', null, null, null);
-  blob(g, 24, cy - 5, 5, 5.5, '#ffffff', '#f2e8ff', null, '#3a0d26'); blob(g, 41, cy - 6, 6, 6.5, '#ffffff', '#f2e8ff', null, '#3a0d26');
-  g.fillStyle = angry ? '#d01040' : '#2a1036'; g.fillRect(24, cy - 6, 3, 4); g.fillRect(41, cy - 8, 4, 5); px(g, 24, cy - 6, '#fff'); px(g, 41, cy - 8, '#fff');
-  if (angry) { g.fillStyle = '#7a1f4f'; g.fillRect(19, cy - 12, 8, 1); g.fillRect(37, cy - 14, 9, 1); }
-  for (let x = 24; x <= 40; x++) px(g, x, cy + 3 + Math.round(Math.sin((x - 24) / 16 * Math.PI) * 3), '#3a0d26');
-  g.fillStyle = '#fff'; g.fillRect(27, cy + 5, 2, 3); g.fillRect(36, cy + 5, 2, 3);
-  g.fillStyle = '#7a1f4f'; g.fillRect(6, cy, 7, 1); g.fillRect(6, cy + 3, 7, 1); g.fillRect(51, cy, 7, 1); g.fillRect(51, cy + 3, 7, 1);
-  g.fillStyle = '#ff5fa8'; g.fillRect(16, cy + 1, 4, 2); g.fillRect(45, cy + 1, 4, 2); return c;
+  const [c, g] = mk(64, 58); const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); }, O = '#2a2430';
+  const cy = 40 + sq * 2, bw = 17 + sq * 2, bh = 15 - sq * 2;
+  for (let y = 18; y < 54; y++) { const w = Math.round(10 + (y - 18) * 0.6); R(32 - w, y, w * 2, 1, y % 3 ? '#6a2a5a' : '#5a204c'); } // cape
+  for (let i = 0; i < 12; i++) blob(g, 54 - Math.sin(i / 3) * 3, 52 - i * 2.2, 2.4, 2.4, i % 3 ? '#9aa0aa' : '#5a5f6a', null, null, i > 9 ? O : null); // curled tail
+  blob(g, 32, cy, bw, bh, '#9aa0aa', '#767b86', '#c4c8d0', O); blob(g, 32, cy + 2, bw * 0.45, bh * 0.75, '#f2e8d8', '#ddd0bc', null, null); // body + bib
+  for (const s of [-1, 1]) for (let k = 0; k < 3; k++) R(32 + s * (bw - 4) - (s > 0 ? 3 : 0), cy - 6 + k * 5, 4, 1, '#5a5f6a'); // flank stripes
+  for (const s of [-1, 1]) blob(g, 32 + s * 8, cy + bh - 1, 4, 2.5, '#c4c8d0', null, null, O); // front paws
+  const hy = cy - bh - 6; blob(g, 32, hy, 12, 10, '#9aa0aa', '#767b86', '#c4c8d0', O); // head
+  for (const s of [-1, 1]) for (let y = 0; y < 7; y++) for (let x = 0; x <= 6 - y; x++) px(g, Math.round(32 + s * 8 + x - (6 - y) / 2), hy - 8 - y, x === 0 || x === 6 - y ? O : (x > 1 && x < 5 - y ? '#e8b0b8' : '#9aa0aa'));
+  for (let k = 0; k < 3; k++) R(28 + k * 3, hy - 9, 2, 3, '#5a5f6a'); // forehead "M" stripes
+  for (const s of [-1, 1]) { const ex = 32 + s * 5; R(ex - 2, hy - 1, 5, 3, angry ? '#ffcf3a' : '#9ae06a'); R(ex, hy - 1, 1, 3, O); if (angry) R(ex - 3, hy - 3, 6, 1, O); }
+  R(31, hy + 3, 3, 2, '#e88a9a'); R(30, hy + 5, 1, 1, O); R(34, hy + 5, 1, 1, O); R(31, hy + 6, 3, 1, O); // nose + small mouth
+  for (const s of [-1, 1]) for (let k = 0; k < 2; k++) R(32 + s * 9 - (s > 0 ? 0 : 5), hy + 3 + k * 2, 6, 1, '#e8e8f0'); // whiskers
+  R(25, hy - 16, 15, 3, '#f6c94c'); for (const x of [25, 30, 35, 39]) R(x, hy - 19, 1, 3, '#f6c94c'); R(31, hy - 15, 2, 1, '#ff5f6d'); // crown
+  return c;
 }
-function kitten(f) { const [c, g] = mk(20, 18); const s = f ? 1 : 0; for (const d of [-1, 1]) { g.fillStyle = '#7a1f4f'; g.fillRect(10 + d * 5 - 1, 3 + s, 3, 1); g.fillStyle = '#ff8fc8'; g.fillRect(10 + d * 5 - 1, 4 + s, 3, 3); }
-  blob(g, 10, 11 + s, 8 + s, 6 - s, '#ff8fc8', '#e0609f', '#ffd0e6', '#7a1f4f'); g.fillStyle = '#2a1036'; g.fillRect(6, 9 + s, 2, 3); g.fillRect(12, 9 + s, 2, 3); px(g, 6, 9 + s, '#fff'); px(g, 12, 9 + s, '#fff'); g.fillStyle = '#3a0d26'; g.fillRect(9, 13 + s, 2, 1); return c; }
+// Catnip Kits: Cate's tabby kittens (ginger/grey stripes, green eyes)
+function kitten(f) { const [c, g] = mk(20, 18); const s = f ? 1 : 0, O = '#3a2418';
+  for (const d of [-1, 1]) { g.fillStyle = O; g.fillRect(10 + d * 5 - 1, 3 + s, 3, 1); g.fillStyle = '#e09040'; g.fillRect(10 + d * 5 - 1, 4 + s, 3, 3); }
+  blob(g, 10, 11 + s, 8 + s, 6 - s, '#e09040', '#b06a28', '#f4c088', O); g.fillStyle = '#b06a28'; for (let k = 0; k < 3; k++) g.fillRect(4 + k * 5, 7 + s, 2, 3);
+  g.fillStyle = '#7ad04a'; g.fillRect(6, 9 + s, 2, 3); g.fillRect(12, 9 + s, 2, 3); g.fillStyle = O; g.fillRect(7, 9 + s, 1, 3); g.fillRect(13, 9 + s, 1, 3); g.fillStyle = '#f2e0c8'; g.fillRect(8, 13 + s, 4, 2); px(g, 9, 13 + s, '#e88a9a'); return c; }
 function boar(f) { const [c, g] = mk(26, 21); blob(g, 13, 12, 11, 7, '#8a5a3a', '#5e3a22', '#b07a52', '#2e1a0e');
   for (let i = 0; i < 6; i++) { g.fillStyle = '#3f7a2e'; g.fillRect(5 + i * 3, 3 + (i % 2), 2, 4); px(g, 5 + i * 3, 2 + (i % 2), '#9ee06e'); }
   g.fillStyle = '#2e1a0e'; g.fillRect(6 + f, 18, 3, 3); g.fillRect(17 - f, 18, 3, 3); g.fillStyle = '#d88a7a'; g.fillRect(9, 13, 8, 4); px(g, 11, 14, '#5e3a22'); px(g, 14, 14, '#5e3a22');

@@ -1,5 +1,7 @@
 # PepeNugs: Cate's Fury
 
+An Inu pack adventure: every villager is an Inu, the enemies are Cate the Catnip Queen (an upright grey tabby with a crown and cape) and her ginger tabby Catnip Kits, and cosmetics tie into $KIBBLE.
+
 Display title comes from `src/config.js` (`GAME_TITLE`). The repo, URL (pepeballz.vercel.app), save keys and kibble-pay game id stay `pepeballz`.
 
 This is an original top-down action RPG built with vanilla JS and canvas. It has no frameworks and no build step.
