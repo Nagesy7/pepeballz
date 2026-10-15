@@ -25,7 +25,7 @@ export function feeSplit(priceU) {
 }
 // ---------- wallet adapter ----------
 export class SimWallet {
-  constructor(store = {}) { this.id = 'sim'; this.simulated = true; this.s = store; this.s.balU ??= toU(250); this.s.holdU ??= toU(1500); this.address = null; }
+  constructor(store = {}) { this.id = 'sim'; this.simulated = true; this.s = store; this.s.balU ??= toU(2500000); this.s.holdU ??= toU(1500); this.address = null; }
   async connect() { this.address = 'SIM' + 'x'.repeat(4) + 'PepeNugsDemo'; return this.address; }
   async balanceU() { return this.s.balU; }
   async holdingsU() { return this.s.holdU; }
@@ -82,16 +82,16 @@ export const COSMETICS = {
   skin_primal: { kind: 'aura', name: 'Wild Ember Ruff', color: '#ff6a2a', tier: 'shogun', forms: [3] },
   title_golden: { kind: 'title', name: 'Golden Pondkeeper', unique: true },
   // Burn for legends (no fee: the whole amount is burned)
-  legend_obsidian: { kind: 'aura', name: 'Obsidian Legend Aura', color: '#40304a', burn: 50 },
-  legend_starfall: { kind: 'bolt', name: 'Starfall Fireflies', color: '#fff6a0', burn: 120 },
-  legend_title: { kind: 'title', name: 'Legend of the Burn', burn: 250 },
+  legend_obsidian: { kind: 'aura', name: 'Obsidian Legend Aura', color: '#40304a', burn: 500000 },
+  legend_starfall: { kind: 'bolt', name: 'Starfall Fireflies', color: '#fff6a0', burn: 1200000 },
+  legend_title: { kind: 'title', name: 'Legend of the Burn', burn: 2500000 },
   // Season sets (limited per saga chapter)
-  s1_cap: { kind: 'outfit', name: 'Fang Peak Climber', equip: { top: 'jacket_black', bottom: 'chinos', feet: 'sneakers_red', hat: 'cap_red' }, season: 'ch1', shop: 5 },
-  s1_aura: { kind: 'aura', name: 'Catnip Pink Aura', color: '#ff8fc8', season: 'ch1', shop: 4 },
+  s1_cap: { kind: 'outfit', name: 'Fang Peak Climber', equip: { top: 'jacket_black', bottom: 'chinos', feet: 'sneakers_red', hat: 'cap_red' }, season: 'ch1', shop: 50000 },
+  s1_aura: { kind: 'aura', name: 'Catnip Pink Aura', color: '#ff8fc8', season: 'ch1', shop: 40000 },
   // Pond Shop exclusives (bought, never tier-gated)
-  aura_frog: { kind: 'aura', name: 'Lilypad Glow', color: '#58c45a', shop: 6 }, beam_rainbow: { kind: 'beam', name: 'Rainbow Ripple', color: 'rainbow', shop: 9.5 },
-  outfit_tux: { kind: 'outfit', name: 'Pond Night Tux', equip: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, shop: 12 },
-  title_wish: { kind: 'title', name: 'Friend of Pondo', shop: 3 },
+  aura_frog: { kind: 'aura', name: 'Lilypad Glow', color: '#58c45a', shop: 60000 }, beam_rainbow: { kind: 'beam', name: 'Rainbow Ripple', color: 'rainbow', shop: 95000 },
+  outfit_tux: { kind: 'outfit', name: 'Pond Night Tux', equip: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, shop: 120000 },
+  title_wish: { kind: 'title', name: 'Friend of Pondo', shop: 30000 },
 };
 const tierRank = (id) => TIERS.findIndex((t) => t.id === id);
 export const unlockedByTier = (holdU) => Object.keys(COSMETICS).filter((k) => COSMETICS[k].tier && tierRank(COSMETICS[k].tier) <= tierRank(tierFor(holdU).id));
@@ -201,7 +201,7 @@ export function settleBounty(s, bounty, contribs, pool = 'weekly') { const n = e
   const amt = Math.floor(n.pools[pool] * bounty.shareBps / 10000); const out = splitByContribution(amt, contribs); n.pools[pool] -= out.reduce((a, o) => a + o.amountU, 0);
   n.winners.unshift({ pool: 'bounty:' + bounty.id, payouts: out, simulated: true }); return { ok: true, payouts: out }; }
 // ---------- 5) Fighter launches (stub): Launch Hall tokens sponsor a warrior skin ----------
-export const LISTING_FEE = 25; // KIBBLE, fee-inclusive: treasury keeps it minus the 1% pool share (DEMO-only stub; not in the live catalog)
+export const LISTING_FEE = 250000; // KIBBLE, fee-inclusive: treasury keeps it minus the 1% pool share (DEMO-only stub; not in the live catalog)
 export function listingQuote() { const q = feeSplit(toU(LISTING_FEE)), t = q.price - q.daily - q.weekly - q.monthly; return { ...q, owner: t, treasuryTotal: t }; }
 export async function listFighter(s, { token, skin }, w = wallet) { const n = ensureNet(s); if (!/^\$?[A-Z0-9]{2,10}$/.test(token || '')) return { ok: false, reason: 'Bad token ticker' };
   if (!w) return { ok: false, reason: 'Connect a wallet' }; const q = listingQuote(); const r = await w.transfer({ to: OWNER_WALLET, amountU: q.total, memo: 'pepeballz:launch:' + token }); if (!r.ok) return r;

@@ -23,9 +23,9 @@ test('bounty: settles only when goal met, split by contribution exactly', () => 
   assert.strictEqual(s.net.pools.weekly, 800000); assert.strictEqual(K.contribute(s, 'cate_defeats', 'you', 2), 2);
 });
 test('fighter launch: listing fee to treasury plus the 2% split', async () => {
-  const q = K.listingQuote(); assert.deepStrictEqual([q.total, q.treasuryTotal, q.daily, q.weekly, q.monthly], [25000000, 24750000, 62500, 125000, 62500]);
-  const s = {}, w = new K.SimWallet({ balU: K.toU(100) }); assert.strictEqual((await K.listFighter(s, { token: 'bad token!', skin: 'x' }, w)).ok, false);
-  const r = await K.listFighter(s, { token: 'WOOF', skin: 'aura_violet' }, w); assert.ok(r.ok); assert.strictEqual(s.net.treasuryU, 24750000); assert.strictEqual(await w.balanceU(), K.toU(100) - 25000000);
+  const q = K.listingQuote(); assert.deepStrictEqual([q.total, q.treasuryTotal, q.daily, q.weekly, q.monthly], [250000000000, 247500000000, 625000000, 1250000000, 625000000]);
+  const s = {}, w = new K.SimWallet({ balU: K.toU(1000000) }); assert.strictEqual((await K.listFighter(s, { token: 'bad token!', skin: 'x' }, w)).ok, false);
+  const r = await K.listFighter(s, { token: 'WOOF', skin: 'aura_violet' }, w); assert.ok(r.ok); assert.strictEqual(s.net.treasuryU, 247500000000); assert.strictEqual(await w.balanceU(), K.toU(1000000) - 250000000000);
 });
 test('seasons: open window and holder early access weekend', async () => {
   const S1 = K.SEASONS[0], before = S1.start - 864e5;
@@ -34,7 +34,7 @@ test('seasons: open window and holder early access weekend', async () => {
   assert.ok((await K.buySeasonItem(s, 's1_aura', S1.start + 1, 0, w)).ok); assert.strictEqual((await K.buySeasonItem(s, 's1_aura', S1.start + 1, 0, w)).ok, false);
 });
 test('burn for legends: full amount burned, public counter rises, no fee', async () => {
-  const s = {}, w = new K.SimWallet({ balU: K.toU(100) }), before = K.publicBurned(s);
-  const r = await K.burnForLegend(s, 'legend_obsidian', w); assert.ok(r.ok); assert.strictEqual(K.publicBurned(s) - before, K.toU(50)); assert.strictEqual(await w.balanceU(), K.toU(50));
+  const s = {}, w = new K.SimWallet({ balU: K.toU(1000000) }), before = K.publicBurned(s);
+  const r = await K.burnForLegend(s, 'legend_obsidian', w); assert.ok(r.ok); assert.strictEqual(K.publicBurned(s) - before, K.toU(500000)); assert.strictEqual(await w.balanceU(), K.toU(500000));
   assert.strictEqual(s.net.treasuryU, 0); assert.strictEqual((await K.burnForLegend(s, 'legend_title', w)).ok, false);
 });

@@ -8,8 +8,8 @@ test('buyWish settles to treasury + pools and never changes stats', async () => 
   const s = {}, p = C.init(C.newPlayer()), before = JSON.stringify({ st: p.stats, l: p.level, i: p.inventory, hp: p.hp });
   const w = new K.SimWallet({}); await w.connect(); const b0 = await w.balanceU();
   const r = await K.buyWish(s, 'outfit_tux', w); assert.ok(r.ok);
-  assert.strictEqual(b0 - await w.balanceU(), K.toU(12)); assert.strictEqual(s.net.treasuryU, 120000);
-  assert.deepStrictEqual(s.net.pools, { daily: 30000, weekly: 60000, monthly: 30000 }); assert.strictEqual(s.net.ledger[0].to, K.OWNER_WALLET);
+  assert.strictEqual(b0 - await w.balanceU(), K.toU(120000)); assert.strictEqual(s.net.treasuryU, 1200000000);
+  assert.deepStrictEqual(s.net.pools, { daily: 300000000, weekly: 600000000, monthly: 300000000 }); assert.strictEqual(s.net.ledger[0].to, K.OWNER_WALLET);
   assert.strictEqual((await K.buyWish(s, 'outfit_tux', w)).ok, false); assert.strictEqual((await K.buyWish(s, 'aura_gold', w)).ok, false);
   assert.strictEqual(JSON.stringify({ st: p.stats, l: p.level, i: p.inventory, hp: p.hp }), before);
 });
