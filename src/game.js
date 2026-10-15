@@ -59,8 +59,9 @@ setupTouch();
 
 // ---------------- sizing: crisp integer scale ----------------
 function resize() {
-  DPR = Math.min(2, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
-  cv.width = w; cv.height = h; SCALE = Math.max(1, Math.floor(Math.min(w, h) / 230)); VW = Math.ceil(w / SCALE); VH = Math.ceil(h / SCALE);
+  // DPR cap 3 (was 2): on 3x phones a 2x backing store was CSS-stretched 1.5x => uneven pixel columns that shimmer while scrolling.
+  DPR = Math.min(3, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } // resetting width clears the canvas: only on a real size change SCALE = Math.max(1, Math.floor(Math.min(w, h) / 230)); VW = Math.ceil(w / SCALE); VH = Math.ceil(h / SCALE);
   ctx.imageSmoothingEnabled = false;
 }
 addEventListener('resize', resize); new ResizeObserver(resize).observe(cv);
@@ -546,7 +547,9 @@ function panel(x, y, w, h) { R(x, y, w, h, '#1a1420'); R(x + 1, y + 1, w - 2, h 
 function paw(x, y, col) { R(x + 1, y + 2, 3, 3, col); R(x, y, 1, 1, col); R(x + 2, y - 1, 1, 1, col); R(x + 4, y, 1, 1, col); }
 function drawWorld() {
   const a = G.area, sx = G.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * G.shake * 5) : 0, sy = G.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * G.shake * 5) : 0;
-  const cx = Math.round(Math.max(0, Math.min(a.w * TILE - VW, pl.x - VW / 2))) - sx, cy = Math.round(Math.max(0, Math.min(a.h * TILE - VH, pl.y - 12 - VH / 2))) - sy;
+  // Camera follows the hero's ROUNDED position with an integer half-view, so hero-vs-camera rounding can never disagree.
+  // Before: round(pl.x - VW/2) with odd VW rounded opposite to round(pl.x) every other frame => hero wobbled 1 art px (3-6 CSS px) while walking.
+  const cx = Math.max(0, Math.min(a.w * TILE - VW, Math.round(pl.x) - (VW >> 1))) - sx, cy = Math.max(0, Math.min(a.h * TILE - VH, Math.round(pl.y) - 12 - (VH >> 1))) - sy;
   const ox = a.w * TILE < VW ? -Math.floor((VW - a.w * TILE) / 2) : cx, oy = a.h * TILE < VH ? -Math.floor((VH - a.h * TILE) / 2) : cy; G.cam = { x: ox, y: oy };
   R(0, 0, VW, VH, '#1a1420');
   const x0 = Math.max(0, Math.floor(ox / TILE)), y0 = Math.max(0, Math.floor(oy / TILE)), x1 = Math.min(a.w - 1, Math.ceil((ox + VW) / TILE)), y1 = Math.min(a.h - 1, Math.ceil((oy + VH) / TILE) + 1);
@@ -584,7 +587,8 @@ function drawWorld() {
 function drawHero() {
   const { x: ox, y: oy } = G.cam, img = heroImg(), [fx, fy] = DV[pl.dir], lunge = pl.atk > 0 ? 2 : 0;
   const shakeX = G.state === 'cut' && !G.cut.flashed ? Math.round(Math.random() * 2 - 1) : 0;
-  const x = Math.round(pl.x - FORM_W / 2 - ox + fx * lunge) + shakeX, y = Math.round(pl.y - FORM_H + 2 - oy + fy * lunge), feetX = Math.round(pl.x - ox), feetY = Math.round(pl.y - oy);
+  const rx = Math.round(pl.x), ry = Math.round(pl.y), x = rx - Math.round(FORM_W / 2) - ox + fx * lunge + shakeX, y = ry - FORM_H + 2 - oy + fy * lunge, feetX = rx - ox, feetY = ry - oy;
+  window.__camDbg = { x: -ox * SCALE / DPR, y: -oy * SCALE / DPR, px: x * SCALE / DPR, py: y * SCALE / DPR }; // jitter probe (CSS px)
   ctx.fillStyle = 'rgba(20,20,30,.3)'; ctx.beginPath(); ctx.ellipse(feetX, feetY, 7, 2.5, 0, 0, 7); ctx.fill();
   const cut = G.state === 'cut' ? G.cut : null, st = cut ? (cut.flashed ? cut.stage : Math.max(1, cut.stage - 1)) : pl.stage;
   if (st > 0 || pl.charge) drawAura(feetX, feetY, Math.max(1, st), auraColor(), cut && !cut.flashed ? 0.6 + cut.t * 0.6 : pl.charge && !st ? 0.7 : 1);

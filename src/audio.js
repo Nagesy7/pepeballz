@@ -29,6 +29,7 @@ function hiss(t, dur, vol, freq, dest) {
 }
 function tick() {
   if (!cur || !ctx) return; const tr = TRACKS[cur], spb = 30 / tr.bpm;
+  if (nextT < ctx.currentTime - 0.05) nextT = ctx.currentTime + 0.05; // timer throttled (background tab / suspended): skip missed steps instead of firing them all at once
   while (nextT < ctx.currentTime + 0.15) {
     const l = hz(tr.lead[step % tr.lead.length]), b = hz(tr.bass[step % tr.bass.length]), d = tr.d[step % tr.d.length];
     if (l) tone('square', l, nextT, spb * 1.6, 0.11, music); if (b) tone('triangle', b, nextT, spb * 1.8, 0.3, music);
@@ -54,16 +55,25 @@ const SFX = {
     [1047, 1319, 1568].forEach((f, i) => tone('sine', f, t + 1.0 + i * 0.06, 0.4, 0.08, sfxG)); },
   croak: (t) => { tone('sawtooth', 110, t, 0.25, 0.4, sfxG, 70); tone('sawtooth', 90, t + 0.3, 0.35, 0.4, sfxG, 60); }, meow: (t) => tone('sawtooth', 500, t, 0.35, 0.3, sfxG, 1100),
 };
+// one-shot limiter: per-SFX cooldown + max concurrent voices (per-frame triggers can't stack into a wall of noise)
+const CD = { blip: 0.04, hit: 0.05, swing: 0.06, pickup: 0.06, hurt: 0.15, die: 0.1, meow: 0.3, croak: 0.3 }, lastAt = {}; let ends = [];
+export const MAX_VOICES = 8;
+export function gate(name, now, cd = CD[name] ?? 0.05, dur = 0.3) { ends = ends.filter((t) => t > now); if (ends.length >= MAX_VOICES || now - (lastAt[name] ?? -1e9) < cd) return false; lastAt[name] = now; ends.push(now + dur); return true; }
+if (typeof document !== 'undefined') { // pause everything while the tab is hidden / navigating back to Inu Verse
+  document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend?.(); else ctx.resume?.(); });
+  addEventListener('pagehide', () => ctx?.suspend?.()); }
 export const Audio8 = {
   unlock() {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
     const AC = globalThis.AudioContext || globalThis.webkitAudioContext; if (!AC) return;
     ctx = new AC(); master = ctx.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(ctx.destination);
     music = ctx.createGain(); music.gain.value = 0.35; music.connect(master); sfxG = ctx.createGain(); sfxG.gain.value = 0.6; sfxG.connect(master);
     nextT = ctx.currentTime + 0.05; timer = setInterval(tick, 40);
   },
-  music(name) { if (cur === name) return; cur = name; step = 0; if (ctx) nextT = ctx.currentTime + 0.05; },
-  sfx(name) { if (ctx && !muted && SFX[name]) try { SFX[name](ctx.currentTime); } catch {} },
+  music(name) { if (cur === name) return; cur = name; step = 0; if (!ctx) return; // one track at a time: fade out notes the old track already queued, start the new one on a fresh bus
+    const old = music, t = ctx.currentTime; old.gain.setTargetAtTime(0, t, 0.03); setTimeout(() => old.disconnect(), 400);
+    music = ctx.createGain(); music.gain.value = 0.35; music.connect(master); nextT = t + 0.08; },
+  sfx(name) { if (ctx && !muted && SFX[name] && gate(name, ctx.currentTime)) try { SFX[name](ctx.currentTime); } catch {} },
   toggleMute() { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.5; return muted; },
   get current() { return cur; }, get running() { return !!ctx && ctx.state === 'running'; },
 };

@@ -1,0 +1,12 @@
+{"1366x768":{"frames":146,"sy":[0],"st":[0],"bt":[0],"vvy":[0],"ih":[768],"cy":[0],"cx":[0],"cwid":[1366],"w":[1366],"h":[768],"canvasWidthSets":0,"shifts":0,"docH":768,"winH":768,"docW":1366,"dtMax":"16.8","audioCtx":1,"audioStarts":10,"maxLiveVoices":6,"startsPer100msMax":3,"camSamples":146,"bgDX":{"mean":-3.786,"sd":1.496,"max":6,"zeroFrames":4,"reversals":0,"velSdPerFrame":1.496},
+"playerScreenDX":{"mean":0.124,"sd":0.694,"max":6,"zeroFrames":140,"reversals":0,"velSdPerFrame":0.693},
+"bgOffDevicePx":0,"stepHist":null,"errors":[]},
+"1440x900":{"frames":148,"sy":[0],"st":[0],"bt":[0],"vvy":[0],"ih":[900],"cy":[0],"cx":[0],"cwid":[1440],"w":[1440],"h":[900],"canvasWidthSets":0,"shifts":0,"docH":900,"winH":900,"docW":1440,"dtMax":"16.8","audioCtx":1,"audioStarts":10,"maxLiveVoices":6,"startsPer100msMax":3,"camSamples":148,"bgDX":{"mean":-3.265,"sd":1.914,"max":6,"zeroFrames":24,"reversals":0,"velSdPerFrame":1.915},
+"playerScreenDX":{"mean":0.633,"sd":1.535,"max":6,"zeroFrames":123,"reversals":0,"velSdPerFrame":1.535},
+"bgOffDevicePx":0,"stepHist":null,"errors":[]},
+"1280x720":{"frames":144,"sy":[0],"st":[0],"bt":[0],"vvy":[0],"ih":[720],"cy":[0],"cx":[0],"cwid":[1280],"w":[1280],"h":[720],"canvasWidthSets":0,"shifts":0,"docH":720,"winH":720,"docW":1280,"dtMax":"33.3","audioCtx":1,"audioStarts":10,"maxLiveVoices":6,"startsPer100msMax":3,"camSamples":144,"bgDX":{"mean":-3.944,"sd":1.393,"max":6,"zeroFrames":0,"reversals":0,"velSdPerFrame":1.383},
+"playerScreenDX":{"mean":-0.021,"sd":2.34,"max":3,"zeroFrames":56,"reversals":86,"velSdPerFrame":2.33},
+"bgOffDevicePx":0,"stepHist":null,"errors":[]},
+"844x390":{"frames":157,"sy":[0],"st":[0],"bt":[0],"vvy":[0],"ih":[390],"cy":[0],"cx":[0],"cwid":[844],"w":[1688],"h":[780],"canvasWidthSets":0,"shifts":0,"docH":390,"winH":390,"docW":844,"dtMax":"33.3","audioCtx":1,"audioStarts":11,"maxLiveVoices":6,"startsPer100msMax":3,"camSamples":157,"bgDX":{"mean":-0.74,"sd":1.054,"max":4.5,"zeroFrames":97,"reversals":0,"velSdPerFrame":1.051},
+"playerScreenDX":{"mean":0.596,"sd":1.221,"max":3,"zeroFrames":76,"reversals":34,"velSdPerFrame":1.203},
+"bgOffDevicePx":88,"stepHist":null,"errors":[]}}
