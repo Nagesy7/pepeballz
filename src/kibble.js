@@ -1,4 +1,4 @@
-// $KIBBLE network layer for the game (display title in config.js; internal id 'pepeballz'). Real kibble-pay wallet by default ($KIBBLE is live; this note used to say 'launching soon' until the
+// $KIBBLE network layer for the game (display title in config.js; internal id 'pepeballz'). Real kibble-pay wallet by default ($KIBBLE is live; SOON_MSG only if kibble-pay is unreachable; the
 // $KIBBLE mint is set); SimWallet + local ledger ONLY in demo mode (?demo=1), clearly labelled.
 // Patterns and fee math follow Inu Verse src/mall.js + src/leaderboards.js:
 //   amounts are integer micro-KIBBLE (1 KIBBLE = 1,000,000 u, "millionths") so every split is exact.
