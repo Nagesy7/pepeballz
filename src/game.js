@@ -676,7 +676,8 @@ function render() {
   if (G.banner) { const a = Math.min(1, G.banner.t * 2); ctx.globalAlpha = a; const w = Math.min(VW - 20, G.banner.text.length * 7 + 30); panel((VW - w) / 2, VH * 0.2, w, 20); text(G.banner.text, VW / 2, VH * 0.2 + 6, '#ffe066', 9, 'center'); ctx.globalAlpha = 1; }
   if (G.dialog) drawDialog();
   if (G.menu) drawMenu();
-  if (G.toast) { const w = Math.min(VW - 20, G.toast.msg.length * 5.5 + 20); panel((VW - w) / 2, VH - 26, w, 16); text(G.toast.msg, VW / 2, VH - 22, '#fff8e8', 7, 'center'); }
+  if (G.toast) { const ls = wrap(G.toast.msg, VW - 40).slice(0, 4), w = Math.min(VW - 20, Math.max(...ls.map((l) => measure(l))) + 20), h = 8 + ls.length * 10, y = VH - h - 10; // long wallet errors wrap instead of running off-screen
+    panel((VW - w) / 2, y, w, h); ls.forEach((l, i) => text(l, VW / 2, y + 4 + i * 10, '#fff8e8', 7, 'center')); }
   if (G.fade > 0) { ctx.fillStyle = `rgba(10,8,20,${G.fade})`; ctx.fillRect(0, 0, VW, VH); }
 }
 // ---------------- loop ----------------
