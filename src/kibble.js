@@ -12,7 +12,13 @@
 //     holdingsU(): Promise<int>, transfer({ to, amountU, memo }): Promise<{ ok, sig }>, burn({ amountU, memo }): Promise<{ ok, sig }> }
 // and be installed with setWallet(adapter). settle() is the only place money moves.
 export const U = 1_000_000;
-export const OWNER_WALLET = 'BzLYTFAfUsjzQ5x8bx5BbPK4DFtaHrLCuferkvkxTNGJ'; // treasury (multisig later). Display only while simulated.
+export const OWNER_WALLET = 'BzLYTFAfUsjzQ5x8bx5BbPK4DFtaHrLCuferkvkxTNGJ'; // treasury
+// Public wallet names (addresses above/below are unchanged; names are display only)
+export const WALLET_NAMES = { [OWNER_WALLET]: "President's Vault", Akk3DdxeRRLZABfpkFKYoDBk6Zim5wNLRYemNFjv56fn: 'Kennel Chest', Bv35NAj1XvfSGrQKpHHw29ojZmY4NYyUZr7rwXpPhW8Y: 'Bone Vault' };
+export const BONE_VAULT_DESC = 'Bone Vault receives the 25% dev share for hosting, tools and art, with part of it seeding the next Inu project after Inu Verse.';
+export const shortAddr = (a) => a.slice(0, 4) + '…' + a.slice(-4);
+export const solscanUrl = (a) => 'https://solscan.io/account/' + a;
+export const VAULT_NAME = WALLET_NAMES[OWNER_WALLET], VAULT_SHORT = shortAddr(OWNER_WALLET), VAULT_URL = solscanUrl(OWNER_WALLET);
 export const FEE_BPS = { owner: 100, daily: 25, weekly: 50, monthly: 25 };
 export const FEE_TOTAL_BPS = 200;
 export const toU = (k) => Math.round(k * U);

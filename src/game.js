@@ -9,6 +9,7 @@ import { heroFrame, STAGES, FORM_W, FORM_H } from './forms.js';
 import { drawText, measure } from './font.js';
 import { GAME_TITLE, GAME_SUBTITLE, GAME_FULL_TITLE } from './config.js';
 document.title = GAME_FULL_TITLE;
+{ const a = document.getElementById('vaultLink'); if (a) { a.href = K.VAULT_URL; a.innerHTML = `<b>${K.VAULT_NAME}</b> ${K.VAULT_SHORT} <u>View on Solscan ↗</u>`; a.title = K.OWNER_WALLET; } }
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const A = buildArt(), W = buildWorld();
@@ -61,7 +62,8 @@ setupTouch();
 function resize() {
   // DPR cap 3 (was 2): on 3x phones a 2x backing store was CSS-stretched 1.5x => uneven pixel columns that shimmer while scrolling.
   DPR = Math.min(3, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
-  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } // resetting width clears the canvas: only on a real size change SCALE = Math.max(1, Math.floor(Math.min(w, h) / 230)); VW = Math.ceil(w / SCALE); VH = Math.ceil(h / SCALE);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } // resetting width clears the canvas: only on a real size change
+  SCALE = Math.max(1, Math.floor(Math.min(w, h) / 230)); VW = Math.ceil(w / SCALE); VH = Math.ceil(h / SCALE);
   ctx.imageSmoothingEnabled = false;
 }
 addEventListener('resize', resize); new ResizeObserver(resize).observe(cv);
@@ -415,10 +417,14 @@ function leaderboardsMenu() {
         const out = K.awardPool(G.root, pool, ranked, pool); const mine = out.find((o) => o.id === 'you'); if (mine) G.net.wallet.balU += mine.amountU; saveNet(); await refreshWallet();
         toast(out.length ? `Paid ${out.map((o) => `#${o.rank} ${K.fmtK(o.amountU)}`).join(', ')}` : 'Pool is empty: buy a cosmetic to seed it', 3); } }, { label: 'Back', act: closeMenu }] });
 }
+// President's Vault (treasury) on Solscan: a real DOM <a> (#vaultLink) is shown over the canvas while these menus are open;
+// the menu item also opens it (keyboard/gamepad users) and falls back to a toast with the URL if a popup is blocked.
+const VAULT_MENUS = ['Pond Shop', 'Fighter Launches (stub)'];
+const vaultItem = () => ({ label: `${K.VAULT_NAME} on Solscan  ${K.VAULT_SHORT}`, sub: 'Opens solscan.io in a new tab (or tap the gold link at the top).', act: () => { const w = window.open(K.VAULT_URL, '_blank', 'noopener'); if (!w) toast(K.VAULT_URL, 4); } });
 function wishShop() {
-  openMenu({ title: 'Pond Shop', info: () => [SIM(), 'Cosmetic only. Never changes stats. Price includes the 2%:', '1% treasury, 0.25% daily / 0.5% weekly / 0.25% monthly pools.', `Treasury ${K.OWNER_WALLET.slice(0, 6)}..${K.OWNER_WALLET.slice(-4)}  Balance ${K.fmtK(G.walletBal || 0)}`],
-    items: () => [...K.WISH_SHOP.map((c) => { const q = K.quote(c.id), own = G.net.owned.includes(c.id); return { label: `${c.name}  ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: own ? 'Equip it in Cosmetics' : `incl. 2% (treasury ${K.fmtK(q.owner)}, pools ${K.fmtK(q.daily)}/${K.fmtK(q.weekly)}/${K.fmtK(q.monthly)})`, disabled: own,
-      act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Unlocked: ${c.name}${K.DEMO ? ' (demo)' : ''}`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), { label: 'Back', act: closeMenu }] });
+  openMenu({ title: 'Pond Shop', info: () => [SIM(), 'Cosmetic only. Never changes stats. Price includes the 2%:', `1% to ${K.VAULT_NAME}, 0.25% daily / 0.5% weekly / 0.25% monthly pools.`, `${K.VAULT_NAME} ${K.VAULT_SHORT}  Balance ${K.fmtK(G.walletBal || 0)}`],
+    items: () => [...K.WISH_SHOP.map((c) => { const q = K.quote(c.id), own = G.net.owned.includes(c.id); return { label: `${c.name}  ${own ? 'OWNED' : K.fmtK(q.total) + ' K'}`, sub: own ? 'Equip it in Cosmetics' : `incl. 2% (President's Vault ${K.fmtK(q.owner)}, pools ${K.fmtK(q.daily)}/${K.fmtK(q.weekly)}/${K.fmtK(q.monthly)})`, disabled: own,
+      act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.buyWish(G.root, c.id); if (r.ok) { Audio8.sfx('orb'); toast(`Unlocked: ${c.name}${K.DEMO ? ' (demo)' : ''}`); saveNet(); await refreshWallet(); } else toast(r.reason); } }; }), vaultItem(), { label: 'Back', act: closeMenu }] });
 }
 function cosmeticsMenu() {
   const kinds = ['aura', 'bolt', 'beam', 'outfit', 'title'];
@@ -490,8 +496,8 @@ function burnMenu() {
     items: () => [...Object.entries(K.COSMETICS).filter(([, c]) => c.burn).map(([id, c]) => { const own = G.net.owned.includes(id); return { label: `${c.name}  ${own ? 'UNLOCKED' : 'burn ' + c.burn + ' K'}`, disabled: own, act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.burnForLegend(G.root, id); toast(r.ok ? `Burned ${K.fmtK(r.burnedU)}${K.DEMO ? ' (demo)' : ''}. Legend unlocked!` : r.reason); if (r.ok) { Audio8.sfx('ascend'); burst(pl.x, pl.y - 16, '#ff6a2a', 30, 90); } saveNet(); await refreshWallet(); } }; }), { label: 'Back', act: closeMenu }] });
 }
 function launchMenu() { const q = K.listingQuote();
-  openMenu({ title: 'Fighter Launches (stub)', info: () => [SIM(), 'Launch Hall community tokens sponsor a warrior skin.', `Listing: ${K.LISTING_FEE} K fee to treasury + 2% split = ${K.fmtK(q.total)} K`, ...(G.net.launches || []).slice(0, 3).map((l) => `${l.token} sponsors ${l.skin}: ${l.status}`), '$WOOF sponsors Kai Surf skin: live (sample)'],
-    items: [{ label: 'List $PAWS sponsoring "Violet Crackle"', act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.listFighter(G.root, { token: '$PAWS', skin: 'Violet Crackle' }); toast(r.ok ? 'Listing submitted (stub)' : r.reason); saveNet(); await refreshWallet(); } }, { label: 'Back', act: closeMenu }] }); }
+  openMenu({ title: 'Fighter Launches (stub)', info: () => [SIM(), 'Launch Hall community tokens sponsor a warrior skin.', `Listing: ${K.LISTING_FEE} K fee to ${K.VAULT_NAME} (${K.VAULT_SHORT}) + 2% split = ${K.fmtK(q.total)} K`, ...(G.net.launches || []).slice(0, 3).map((l) => `${l.token} sponsors ${l.skin}: ${l.status}`), '$WOOF sponsors Kai Surf skin: live (sample)'],
+    items: [{ label: 'List $PAWS sponsoring "Violet Fireflies"', act: async () => { if (!K.getWallet().address && !(await ensureWallet())) return; const r = await K.listFighter(G.root, { token: '$PAWS', skin: 'Violet Fireflies' }); toast(r.ok ? 'Listing submitted (stub)' : r.reason); saveNet(); await refreshWallet(); } }, vaultItem(), { label: 'Back', act: closeMenu }] }); }
 
 // ---------------- title ----------------
 function toTitle() { G.state = 'title'; G.mode = 'story'; G.menu = null; G.dialog = null; Audio8.music('title'); titleMenu(); }
@@ -614,9 +620,12 @@ function drawWish(ox, oy) {
   ctx.drawImage(img, Math.round(tx), Math.round(ty)); ctx.globalAlpha = 1;
 }
 let _rxT = -1, _rx = 0;
-function hudRightInset() { // keep orbs/bones/timer clear of the DOM menu button in landscape touch
-  if (!document.body.classList.contains('touch') || VW <= VH) return 0;
-  if (G.t - _rxT > 1 || _rxT < 0) { _rxT = G.t; const mb = document.getElementById('menuBtn').getBoundingClientRect(), cr = cv.getBoundingClientRect(); _rx = Math.max(0, Math.ceil((cr.right - mb.left + 4) * DPR / SCALE)); }
+function hudRightInset() { // keep orbs/bones/timer clear of DOM overlays in the top-right (menu button, shared kibble-pay wallet / home widgets)
+  if (VW <= VH) return 0;
+  if (G.t - _rxT > 1 || _rxT < 0) { _rxT = G.t; const cr = cv.getBoundingClientRect(); let left = cr.right;
+    for (const id of ['menuBtn', 'inu-wallet', 'inu-home']) { const el = document.getElementById(id); if (!el || !el.offsetParent && getComputedStyle(el).position !== 'fixed') continue; const r = el.getBoundingClientRect();
+      if (r.width && r.top < cr.top + 44 && r.left > cr.left + cr.width / 2) left = Math.min(left, r.left); }
+    _rx = Math.max(0, Math.ceil((cr.right - left + 4) * DPR / SCALE)); }
   return _rx;
 }
 function drawHUD() {
@@ -677,7 +686,7 @@ resize(); toTitle(); requestAnimationFrame(frame);
 cv.addEventListener('pointerdown', (e) => { Audio8.unlock(); if (G.state === 'title' && G.menu?.titleScreen) {
   const r = cv.getBoundingClientRect(), gy = (e.clientY - r.top) * DPR / SCALE, y0 = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)), m = G.menu, n = (m._items || (typeof m.items === 'function' ? m.items() : m.items)).length, i = Math.floor((gy - y0 + 3) / 13);
   if (i >= 0 && i < n) m.sel = i; press('atk'); setTimeout(() => release('atk'), 50); } });
-setInterval(() => document.body.classList.toggle('title', G.state === 'title'), 150);
+setInterval(() => { document.body.classList.toggle('title', G.state === 'title'); document.body.classList.toggle('vault', !!G.menu && VAULT_MENUS.includes(G.menu.title)); }, 150);
 G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb; G.LILY_COUNT = C.LILY_COUNT; G.GAME_TITLE = GAME_TITLE;
 // 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.
 globalThis.__inuHome = { busy: () => G.state !== 'title' ? 'Go back to Inu Verse? Your story is saved first.' : false, save: () => { try { saveGame(true); } catch {} } };
