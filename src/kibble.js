@@ -32,7 +32,7 @@ export function feeSplit(priceU) {
 // ---------- wallet adapter ----------
 export class SimWallet {
   constructor(store = {}) { this.id = 'sim'; this.simulated = true; this.s = store; this.s.balU ??= toU(2500000); this.s.holdU ??= toU(1500); this.address = null; }
-  async connect() { this.address = 'SIM' + 'x'.repeat(4) + 'PepeNugsDemo'; return this.address; }
+  async connect() { this.address = 'SIM' + 'x'.repeat(4) + 'RibbitNugsDemo'; return this.address; }
   async balanceU() { return this.s.balU; }
   async holdingsU() { return this.s.holdU; }
   async burn({ amountU }) { if (amountU > this.s.balU) return { ok: false, reason: 'Insufficient simulated KIBBLE' }; this.s.balU -= amountU; return { ok: true, sig: 'SIMBURN-' + Date.now().toString(36) }; }

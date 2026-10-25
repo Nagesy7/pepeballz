@@ -54,5 +54,5 @@ test('old saves migrate: legacy orb6/orb7 dropped, wished -> pondRestored, old i
 test('IP: no Pepe / wish-granter / beam names in user-facing data', async () => {
   const K = await import('../src/kibble.js'); const all = JSON.stringify([C.ITEMS, C.LILIES, K.COSMETICS, FORMS.map((f) => f.name)]);
   for (const b of ['Pepe', 'Wish', 'Lightning', 'Seven', 'Kame', 'Power Level', 'Scouter', 'Saiyan']) assert.ok(!all.includes(b), b);
-  const cfg = await import('../src/config.js'); assert.strictEqual(cfg.GAME_TITLE, 'PepeNugs');
+  const cfg = await import('../src/config.js'); assert.strictEqual(cfg.GAME_TITLE, 'Ribbit Nugs');
 });

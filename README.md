@@ -1,4 +1,4 @@
-# PepeNugs: Cate's Fury
+# Ribbit Nugs: Cate's Fury
 
 An Inu pack adventure: every villager is an Inu, the enemies are Cate the Catnip Queen (an upright grey tabby with a crown and cape) and her ginger tabby Catnip Kits, and cosmetics tie into $KIBBLE.
 

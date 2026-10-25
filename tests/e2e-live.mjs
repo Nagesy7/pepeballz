@@ -12,7 +12,7 @@ for (const [name, opts] of [['desktop', { viewport: { width: 1280, height: 800 }
     const act = async (a) => { if (name === 'desktop') { const k = { atk: 'KeyJ', menu: 'Enter' }[a]; await p.keyboard.down(k); await p.waitForTimeout(60); await p.keyboard.up(k); } else await p.locator(`[data-act=${a}]`).tap(); await p.waitForTimeout(70); };
     const skip = async () => { for (let i = 0; i < 40 && (await S()).dialog; i++) await act('atk'); };
     await p.goto(BASE + (demo ? '?demo=1' : '')); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(1500);
-    const title = await p.title(); ck(`${tag}: page title`, title === "PepeNugs: Cate's Fury", title); ck(`${tag}: title screen`, (await S()).state === 'title');
+    const title = await p.title(); ck(`${tag}: page title`, title === "Ribbit Nugs: Cate's Fury", title); ck(`${tag}: title screen`, (await S()).state === 'title');
     if (!demo) await p.screenshot({ path: `${OUT}live-title-${name}.png` });
     // start a run (story)
     if (name === 'desktop') await act('menu'); else await p.touchscreen.tap(422, 380); await p.waitForTimeout(800); ck(`${tag}: new game starts`, (await S()).state === 'play'); await skip();

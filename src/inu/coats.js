@@ -1,4 +1,4 @@
-// Coat palettes copied from Inu Verse (src/game.js) so PepeBallz Inu match the Verse look.
+// Coat palettes copied from Inu Verse (src/game.js) so Ribbit Nugs (pepeballz) Inu match the Verse look.
 export const COATS = {
   tan:    { name: 'Classic Tan',    base: '#d98b45', dark: '#a8622c', light: '#f7e6c8', ear: '#f0b48e' },
   cream:  { name: 'Cream / White',  base: '#efe4cf', dark: '#c9b79a', light: '#fffaf0', ear: '#f3c6b0' },
