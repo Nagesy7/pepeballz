@@ -69,7 +69,7 @@ export async function refreshServer() { if (!kp) return; const P = await kp.pool
 export function syncOwned(s, inv) { const n = ensureNet(s); for (const k of Object.keys(inv || {})) { if (!(inv[k] > 0)) continue; const id = k.startsWith('burn:') ? k.slice(5) : k.startsWith(GAME + ':') ? k.slice(GAME.length + 1) : null; if (id && COSMETICS[id] && !n.owned.includes(id)) n.owned.push(id); } return n.owned; }
 // run score for the shared prize board (higher = better): faster clear, fewer deaths
 export const runScore = (timeMs, deaths) => Math.max(1, Math.min(100000, Math.round(1e6 / Math.max(10, timeMs / 1000)) - deaths * 100));
-export async function postRun(timeMs, deaths) { const w = wallet; if (!kp || !w?.address || w.simulated) return null; const sc = runScore(timeMs, deaths); const r = await kp.submitScore(GAME, sc, timeMs); refreshServer().catch(() => {}); return { ...r, score: sc }; }
+export async function postRun(timeMs, deaths) { const w = wallet; if (!kp || !w?.address || w.simulated) { try { globalThis.InuProfile?.gameOver?.({ score: runScore(timeMs, deaths) }); } catch {} return null; } /* guests: Hall of Fame prompt (kibble-pay /inu-profile.js) */ const sc = runScore(timeMs, deaths); const r = await kp.submitScore(GAME, sc, timeMs); refreshServer().catch(() => {}); return { ...r, score: sc }; }
 let wallet = null;
 export const setWallet = (w) => { wallet = w; return w; };
 export const getWallet = () => wallet;
