@@ -6,6 +6,13 @@ Display title comes from `src/config.js` (`GAME_TITLE`). The repo, URL (pepeball
 
 This is an original top-down action RPG built with vanilla JS and canvas. It has no frameworks and no build step.
 - **Controls:** WASD/arrows to move, J/Z to attack (3-hit combo) or talk, K/X for Howl Wave, hold L/C to rest (recover energy), Space/Shift to dash, Q/V to Unleash, Enter for the menu, M or the speaker button to mute, E/B to use your hero power, R to swap powers. Touch devices get a thumb stick on the left and buttons on the right.
+- **Controllers:** Bluetooth/USB PS5 DualSense, Xbox and generic pads are supported through the Gamepad API standard mapping (`src/gamepad.js`).
+  - Moving: left stick (0.2 deadzone, adjustable in Sound & feel) or D-pad.
+  - Fighting: A/Cross attacks or confirms, B/Circle dodges in play (back in menus), Y/Triangle is Howl Wave, X/Square uses the equipped power and R1/RB swaps it.
+  - Other buttons: L1/LB rests, R2/RT unleashes, L2/LT also dodges, Create/View mutes, and Options/Menu pauses or closes menus.
+  - Glyphs and prompts: a toast with PS, Xbox or generic glyphs (detected from `gamepad.id`: 054c or Sony is PS, 045e or Xbox is Xbox) appears on connect and disconnect. Button prompts show while the pad is in use.
+  - Hot-plug and performance: pads are picked up through connect and disconnect events plus polling. Polling runs only while a pad is connected.
+  - Fairness: the pad gives the same actions, speed and cooldowns as the keyboard, with no turbo or aim assist.
 - **Ambient life:** dragonflies and fish ripples by the water, butterflies by day, fireflies at dusk (Sydney time, or `?time=night` / `?time=day`), birds, swaying grass and reeds, drifting leaves and villagers who idle and emote. Each area has its own WebAudio soundscape that only starts after your first tap or key press. Effects scale down on small screens or low FPS and pause while the tab is hidden. Menu > Sound & feel has the sound, volume, ambience, screen shake, hit-stop and effects settings, all saved locally.
 - **Daily challenge:** one rotating challenge per Sydney calendar day, the same for everyone (`src/daily.js`). It is shown on the title screen and in the HUD. Rewards are free Bones plus a cosmetic. There are no wagers, fees or $KIBBLE costs, and it has no effect on prize boards. Progress is saved locally and works with no wallet.
 - **Recent runs feed:** real recent scores from the kibble-pay prize boards (`/api/game?action=scores&game=pepeballz`, daily then weekly), with wallets shortened. When the boards are empty it says "No recent runs yet". Nothing is ever faked.

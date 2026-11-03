@@ -10,7 +10,7 @@ import { drawText, measure } from './font.js';
 import { GAME_TITLE, GAME_SUBTITLE, GAME_FULL_TITLE } from './config.js';
 import * as DY from './daily.js';
 import * as FD from './feed.js';
-import * as PW from './powers.js';
+import * as PW from './powers.js'; import * as GP from './gamepad.js';
 import * as ST from './settings.js';
 import { createAmbient, createPerf, nightFactor } from './ambient.js';
 document.title = GAME_FULL_TITLE;
@@ -29,12 +29,13 @@ const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', Arr
 const held = {}, pressed = {}; const stick = { x: 0, y: 0 };
 const press = (a) => { if (!held[a]) pressed[a] = true; held[a] = true; Audio8.unlock(); };
 const release = (a) => { held[a] = false; };
-addEventListener('keydown', (e) => { const a = KEYMAP[e.code]; if (a) { e.preventDefault(); press(a); } });
-addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) release(a); });
+const kbHeld = {}; // keyboard-held actions, so a pad release never cancels a key that is still down (and vice versa)
+addEventListener('keydown', (e) => { const a = KEYMAP[e.code]; if (a) { e.preventDefault(); kbHeld[a] = true; PAD.active = false; press(a); } });
+addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) { kbHeld[a] = false; if (!PAD.held[a]) release(a); } });
 addEventListener('blur', () => { for (const k in held) held[k] = false; });
 const ok = () => pressed.atk || pressed.menu || pressed.dash, back = () => pressed.blast || pressed.back;
 function moveVec() {
-  let x = (held.right ? 1 : 0) - (held.left ? 1 : 0) + stick.x, y = (held.down ? 1 : 0) - (held.up ? 1 : 0) + stick.y;
+  let x = (held.right ? 1 : 0) - (held.left ? 1 : 0) + stick.x + padStick.x, y = (held.down ? 1 : 0) - (held.up ? 1 : 0) + stick.y + padStick.y;
   const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } return [x, y];
 }
 // menu navigation repeat from stick or keys
@@ -44,6 +45,42 @@ let navCD = 0; function nav(dt) {
   if (d) navCD = 0.22; if (Math.abs(y) < 0.3 && !held.up && !held.down) navCD = 0; return d;
 }
 function navX() { const [x] = moveVec(); if (pressed.left) { navCD = 0.3; return -1; } if (pressed.right) { navCD = 0.3; return 1; } if (held.left || held.right) return 0; if (Math.abs(x) > 0.7 && navCD <= 0) { navCD = 0.25; return Math.sign(x); } return 0; }
+// ---------------- gamepad (standard mapping, see src/gamepad.js) ----------------
+// Polled once per frame only while a pad is connected. Pads drive the same actions as keys: same speed, same cooldowns,
+// one action per physical press (no turbo / auto-fire / aim assist), so prize runs stay identical for every input.
+const PAD = { idx: -1, id: '', kind: null, active: false, held: {}, ctx: null, startPrev: false, edges: GP.createEdges() }; const padStick = { x: 0, y: 0 };
+const padMenuCtx = () => !!(G.menu || G.dialog || G.state !== 'play');
+const padOn = () => PAD.idx >= 0 && PAD.active;
+function padReleaseAll() { for (const a in PAD.held) if (!kbHeld[a]) release(a); PAD.held = {}; PAD.edges = GP.createEdges(); padStick.x = padStick.y = 0; }
+function padConnect(p) { const fresh = PAD.id !== p.id || PAD.idx < 0; PAD.idx = p.index; PAD.id = p.id; PAD.kind = GP.padKind(p.id); PAD.active = true; PAD.startPrev = true;
+  if (fresh) { toast(`${GP.KIND_NAME[PAD.kind]} controller connected  {a}attack {b}dodge {x}power {y}howl {st}menu`, 4.5); Audio8.sfx('select'); }
+  G.pad = { kind: PAD.kind, id: PAD.id, index: PAD.idx }; }
+function padDisconnect() { if (PAD.idx < 0) return; const name = GP.KIND_NAME[PAD.kind] || 'Gamepad'; padReleaseAll(); PAD.idx = -1; PAD.active = false; PAD.id = ''; G.pad = null;
+  toast(`${name} controller disconnected`, 2.5); Audio8.sfx('blip'); }
+function padStart() { Audio8.unlock();
+  const m = G.menu; if (m && !G.dialog) { if (m.titleScreen) { pressed.menu = true; return; } // title: Start = start / confirm
+    if (m.noBack) return; // end screens need a deliberate A / Cross choice
+    Audio8.sfx('blip'); if (G.state === 'play') G.menu = null; else closeMenu(); return; } // in play: close all menus (resume); title sub-menus: one level back
+  pressed.menu = true; } // play: pause; dialogs: advance
+function pollPad() {
+  if (PAD.idx < 0 || !navigator.getGamepads) return; let list; try { list = navigator.getGamepads(); } catch { return; }
+  let p = list?.[PAD.idx]; if (!p || p.connected === false) { p = GP.firstPad(list); if (!p) return padDisconnect(); padConnect(p); }
+  const ctx = padMenuCtx(), r = GP.readPad(p, { menu: ctx, deadzone: SET.padDeadzone ?? GP.DEFAULT_DEADZONE });
+  padStick.x = r.stick[0]; padStick.y = r.stick[1]; if (r.any) { if (!PAD.active) PAD.active = true; Audio8.unlock(); }
+  const { pressed: pe, released: re } = PAD.edges(r.held);
+  for (const a in re) if (!kbHeld[a]) release(a);
+  if (ctx === PAD.ctx) for (const a in pe) press(a); // a button still held across a menu<->play switch never fires the other context's action
+  else for (const a in pe) held[a] = true;
+  PAD.ctx = ctx; PAD.held = r.held;
+  if (r.start && !PAD.startPrev) padStart(); PAD.startPrev = r.start;
+}
+addEventListener('gamepadconnected', (e) => { if (PAD.idx < 0 && e.gamepad) padConnect(e.gamepad); });
+addEventListener('gamepaddisconnected', (e) => { if (e.gamepad?.index !== PAD.idx) return; const other = GP.firstPad([...(navigator.getGamepads?.() || [])].filter((q) => q && q.index !== PAD.idx));
+  if (other) { padReleaseAll(); padConnect(other); } else padDisconnect(); });
+// fallback scan for pads whose connect event was missed (desktop only, every 2s, stops once a pad is found)
+setInterval(() => { if (PAD.idx >= 0 || document.hidden || document.body.classList.contains('touch') || !navigator.getGamepads) return; try { const p = GP.firstPad(navigator.getGamepads()); if (p) padConnect(p); } catch {} }, 2000);
+addEventListener('pointerdown', () => { PAD.active = false; }, { capture: true, passive: true });
+
 // touch: thumb stick + buttons (DOM overlay)
 const touchUI = document.getElementById('touch');
 function setupTouch() {
@@ -189,6 +226,7 @@ function settingsMenu() {
       { label: `Screen shake: ${on(SET.shake)}`, act: () => { SET.shake = !SET.shake; saveSettings(); } },
       { label: `Hit-stop: ${on(SET.hitstop)}`, sub: 'Tiny pause on big hits', act: () => { SET.hitstop = !SET.hitstop; saveSettings(); } },
       { label: `Effects: ${SET.fx}  <>`, sub: 'auto lowers critters / particles when FPS drops', lr: (d) => { SET.fx = FX[(FX.indexOf(SET.fx) + d + 3) % 3]; applyFx(); saveSettings(); }, act: () => { SET.fx = FX[(FX.indexOf(SET.fx) + 1) % 3]; applyFx(); saveSettings(); } },
+      { label: `Stick deadzone: ${Math.round((SET.padDeadzone ?? 0.2) * 100)}%  <>`, sub: 'Controller left stick dead zone', lr: (d) => { SET.padDeadzone = Math.max(0.05, Math.min(0.5, Math.round(((SET.padDeadzone ?? 0.2) + d * 0.05) * 100) / 100)); saveSettings(); }, act: () => { SET.padDeadzone = (SET.padDeadzone ?? 0.2) >= 0.5 ? 0.05 : Math.round(((SET.padDeadzone ?? 0.2) + 0.05) * 100) / 100; saveSettings(); } },
       { label: 'Back', act: closeMenu }] });
 }
 function applyFx() { const q = SET.fx === 'low' ? 0 : SET.fx === 'high' ? 2 : smallScreen() ? 1 : 2; G.perf.q = G.perf.maxQ = q; }
@@ -617,7 +655,7 @@ function titleMenu() {
 
 // ---------------- main update ----------------
 function update(dt) {
-  if (G.freeze) return;
+  if (G.freeze) return; pollPad();
   G.t += dt; if (G.toast && (G.toast.t -= dt) <= 0) G.toast = null; if (G.banner && (G.banner.t -= dt) <= 0) G.banner = null; G.shake = Math.max(0, G.shake - dt);
   if (pressed.mute) toast(setMuted(!SET.muted) ? 'Muted' : 'Sound on');
   if (G.t - _dayChk > 20) { _dayChk = G.t; if (DY.sydneyDate() !== G.daily.date) { G.daily = DY.load(STORE); saveDaily(); } claimDaily(); }
@@ -666,6 +704,25 @@ function drawBolts(cx, fy, n, k = 1, tint) {
 function line(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) | 0; ctx.fillStyle = c; for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / (n || 1)), Math.round(y0 + (y1 - y0) * i / (n || 1)), 1, 1); }
 const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
 function text(s, x, y, col = '#fff', size = 8, align = 'left', shadow = '#1a1420') { drawText(ctx, s, x, y, col, size >= 14 ? 2 : 1, align, shadow); }
+// controller glyphs: {a} {b} {x} {y} {lb} {rb} {lt} {rt} {st} {bk} inside text draw as PS / Xbox / generic button icons
+const GL_W = { a: 12, b: 12, x: 12, y: 12, lb: 18, rb: 18, lt: 18, rt: 18, st: 13, bk: 13 }, GL_RE = /(\{(?:a|b|x|y|lb|rb|lt|rt|st|bk)\})/;
+const XB_COL = { a: '#5cc85c', b: '#e85050', x: '#4a90e8', y: '#e8c040' };
+function glyph(k, x, y) { const kind = PAD.kind || 'generic', cx = x + 4, cy = y + 3;
+  const disc = (col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(cx + 0.5, cy + 0.5, 4.6, 0, 6.283); ctx.fill(); };
+  if (GL_W[k] === 12) {
+    if (kind === 'ps') { disc('#1a1420'); ctx.strokeStyle = '#3a3450'; ctx.lineWidth = 1; ctx.stroke();
+      if (k === 'a') for (let i = -2; i <= 2; i++) { R(cx + i, cy + i, 1, 1, '#7ab0ff'); R(cx + i, cy - i, 1, 1, '#7ab0ff'); }
+      else if (k === 'b') { ctx.strokeStyle = '#ff6a6a'; ctx.beginPath(); ctx.arc(cx + 0.5, cy + 0.5, 2.4, 0, 6.283); ctx.stroke(); }
+      else if (k === 'x') { R(cx - 2, cy - 2, 5, 1, '#ff9ad8'); R(cx - 2, cy + 2, 5, 1, '#ff9ad8'); R(cx - 2, cy - 2, 1, 5, '#ff9ad8'); R(cx + 2, cy - 2, 1, 5, '#ff9ad8'); }
+      else { R(cx, cy - 2, 1, 1, '#6ae0a0'); R(cx - 1, cy - 1, 1, 2, '#6ae0a0'); R(cx + 1, cy - 1, 1, 2, '#6ae0a0'); R(cx - 2, cy + 1, 1, 1, '#6ae0a0'); R(cx + 2, cy + 1, 1, 1, '#6ae0a0'); R(cx - 2, cy + 2, 5, 1, '#6ae0a0'); } }
+    else { disc(kind === 'xbox' ? XB_COL[k] : '#8a84a0'); drawText(ctx, kind === 'xbox' ? k.toUpperCase() : GP.GLYPHS.generic[k], cx + 1, cy - 3, '#1a1420', 1, 'center', null); }
+    return; }
+  if (k === 'st' || k === 'bk') { R(x, y - 1, 11, 9, '#1a1420'); R(x + 1, y, 9, 7, '#4a4068'); if (k === 'st') { for (const dy of [1, 3, 5]) R(x + 3, y + dy, 5, 1, '#fff8e8'); } else { R(x + 3, y + 2, 2, 2, '#fff8e8'); R(x + 6, y + 3, 2, 2, '#fff8e8'); } return; }
+  const lab = GP.GLYPHS[kind][k]; R(x, y - 1, 15, 9, '#1a1420'); R(x + 1, y, 13, 7, '#4a4068'); drawText(ctx, lab, x + 8, y, '#fff8e8', 1, 'center', null); }
+const richW = (s) => String(s).split(GL_RE).reduce((t, p) => t + (GL_W[p.slice(1, -1)] && p[0] === '{' ? GL_W[p.slice(1, -1)] : measure(p)), 0);
+function richText(s, x, y, col = '#fff8e8', align = 'left') { if (!String(s).includes('{')) return text(s, x, y, col, 7, align);
+  let cx = Math.round(align === 'center' ? x - richW(s) / 2 : align === 'right' ? x - richW(s) : x);
+  for (const p of String(s).split(GL_RE)) { if (!p) continue; const k = p[0] === '{' ? p.slice(1, -1) : null; if (k && GL_W[k]) { glyph(k, cx, y); cx += GL_W[k]; } else { text(p, cx, y, col, 7); cx += measure(p); } } }
 function wrap(s, maxW) { const out = []; let line = ''; for (const w of String(s).split(' ')) { const t = line ? line + ' ' + w : w; if (measure(t) > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
 function panel(x, y, w, h) { R(x, y, w, h, '#1a1420'); R(x + 1, y + 1, w - 2, h - 2, '#f6e7c8'); R(x + 2, y + 2, w - 4, h - 4, '#2b2440'); R(x + 3, y + 3, w - 6, 1, '#d8a050'); } // kibble-gold accent line
 // tiny 5x5 pawprint (Inu UI accent)
@@ -808,7 +865,7 @@ function drawHUD() {
       if (u.hits) text('' + u.hits, px + 14, by + 46, '#fff', 7, 'right'); px += 18; }
     const eq = PW.ensure(p).eq; if (eq) { const x0 = bx + 121, cd = G.cds[eq] || 0; panel(x0, by, 22, 22); ctx.drawImage(abIcon(eq), x0 + 5, by + 6);
       if (cd > 0) { ctx.globalAlpha = 0.65; R(x0 + 3, by + 3, 16, Math.ceil(16 * cd / PW.ABILITIES[eq].cd), '#000000'); ctx.globalAlpha = 1; text('' + Math.ceil(cd), x0 + 11, by + 8, '#fff', 7, 'center'); }
-      else if (!document.body.classList.contains('touch')) text('E', x0 + 19, by + 15, '#ffe066', 7, 'right'); } }
+      else if (padOn()) glyph('x', x0 + 11, by + 14); else if (!document.body.classList.contains('touch')) text('E', x0 + 19, by + 15, '#ffe066', 7, 'right'); } }
   if (G.run) text(`${G.mode === 'rush' ? 'BOSS RUSH' : G.mode === 'tourney' ? 'TOURNEY' : 'HUNT'}  ${fmtTime(performance.now() - G.run.t0)}  deaths ${G.run.deaths}`, VW - 8 - rx, G.mode === 'hunt' ? 24 : 8, '#ffe066', 8, 'right');
   const b = G.boss; if (b && b.st !== 'intro' && b.st !== 'down') { const w = Math.min(220, VW - 40), x = (VW - w) / 2, y = VH - 18; R(x - 1, y - 1, w + 2, 9, '#1a1420'); R(x, y, Math.round(w * b.hp / b.max), 7, '#d8a050'); R(x, y, Math.round(w * b.hp / b.max), 2, '#f6e0b0'); text('CATE', x, y - 10, '#f6e0b0', 8); }
 }
@@ -817,16 +874,18 @@ function drawDialog() {
   panel(x, y, w, h); if (name) { panel(x + 6, y - 12, Math.min(140, name.length * 6 + 14), 15); text(name, x + 13, y - 8, '#ffe066', 8); }
   wrap(line.slice(0, Math.floor(d.ch)), w - 20, 8).slice(0, 4).forEach((l, i) => text(l, x + 10, y + 9 + i * 11, '#fff8e8', 8));
   if (d.ch >= line.length && Math.floor(G.t * 3) % 2) R(x + w - 12, y + h - 10, 5, 3, '#ffe066');
+  if (padOn()) richText('{a} next', x + w - 18, y + h - 11, '#cfc6e6', 'right');
 }
 function drawMenu() {
   const m = G.menu, items = m._items || (typeof m.items === 'function' ? m.items() : m.items); const info = m.info ? m.info().filter(Boolean).flatMap((l) => wrap(l, Math.min(VW - 12, 330) - 20)) : [];
-  if (m.titleScreen) { const w = 130, x = Math.floor((VW - w) / 2), y = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)); items.forEach((it, i) => { const sel = i === m.sel; text((sel ? '> ' : '  ') + it.label, x + 10, y + i * 13, sel ? '#ffe066' : '#fff', 9); }); return; }
+  if (m.titleScreen) { const w = 130, x = Math.floor((VW - w) / 2), y = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)); items.forEach((it, i) => { const sel = i === m.sel; text((sel ? '> ' : '  ') + it.label, x + 10, y + i * 13, sel ? '#ffe066' : '#fff', 9); }); if (padOn()) richText('{a} select  {st} start', VW / 2, y + items.length * 13 + 1, '#e8e0ff', 'center'); return; }
   const w = Math.min(VW - 12, 330), lineH = 12, h = 22 + info.length * 10 + items.length * lineH + (items[m.sel]?.sub ? 20 : 6), x = Math.floor((VW - w) / 2), y = Math.max(4, Math.floor((VH - h) / 2));
   ctx.fillStyle = 'rgba(10,8,20,.55)'; ctx.fillRect(0, 0, VW, VH); panel(x, y, w, h); text(m.title, x + 10, y + 7, '#ffe066', 9);
   if (G.shiba && /Pond Network|clear!|complete!/.test(m.title)) { G.shibaC ||= G.shiba.canvas(1); const c = G.shibaC; ctx.drawImage(c, x + w - c.width - 6, y + 4); text(G.shiba.profile.name, x + w - 6 - c.width / 2, y + 8 + c.height, '#ffe066', 6, 'center'); } // your Inu Verse Shiba (shared profile)
   info.forEach((l, i) => text(l, x + 10, y + 20 + i * 10, /^(DEMO|KIBBLE launching|LIVE)/.test(l) ? '#ff9ac8' : '#cfc6e6', 7));
   const iy = y + 22 + info.length * 10; items.forEach((it, i) => { const sel = i === m.sel; if (sel) R(x + 5, iy + i * lineH - 2, w - 10, lineH, '#4a4068'); text((sel ? '> ' : '  ') + it.label, x + 10, iy + i * lineH, it.disabled ? '#8a84a0' : sel ? '#ffe066' : '#fff8e8', 8); });
   const sub = items[m.sel]?.sub; if (sub) wrap(sub, w - 20, 7).slice(0, 2).forEach((l, i) => text(l, x + 10, iy + items.length * lineH + 3 + i * 9, '#9effa0', 7));
+  if (padOn()) richText(`{a} select${items.some((q) => q.lr) ? '  stick/D-pad <> adjust' : ''}${m.noBack ? '' : '  {b} back'}${G.state === 'play' && !m.noBack ? '  {st} close' : ''}`, x + w / 2, Math.min(VH - 9, y + h + 3), '#e8e0ff', 'center');
 }
 const stars = Array.from({ length: 70 }, (_, i) => [(i * 97) % 997 / 997, (i * 61) % 613 / 613, i % 3]);
 function drawTitleCards() { const d = G.daily, c = DY.current(d), cos = K.COSMETICS[c.reward], w = Math.min(150, VW - 8), x = 4, y = 4, h = 70, f = G.feed;
@@ -859,8 +918,9 @@ function render() {
   if (G.banner) { const a = Math.min(1, G.banner.t * 2); ctx.globalAlpha = a; const w = Math.min(VW - 20, G.banner.text.length * 7 + 30); panel((VW - w) / 2, VH * 0.2, w, 20); text(G.banner.text, VW / 2, VH * 0.2 + 6, '#ffe066', 9, 'center'); ctx.globalAlpha = 1; }
   if (G.dialog) drawDialog();
   if (G.menu) drawMenu();
-  if (G.toast) { const ls = wrap(G.toast.msg, VW - 40).slice(0, 4), w = Math.min(VW - 20, Math.max(...ls.map((l) => measure(l))) + 20), h = 8 + ls.length * 10, y = VH - h - 10; // long wallet errors wrap instead of running off-screen
-    panel((VW - w) / 2, y, w, h); ls.forEach((l, i) => text(l, VW / 2, y + 4 + i * 10, '#fff8e8', 7, 'center')); }
+  if (G.toast) { const ls = wrap(G.toast.msg, VW - 40).slice(0, 4), w = Math.min(VW - 20, Math.max(...ls.map((l) => richW(l))) + 20), h = 8 + ls.length * 10, y = VH - h - 10; // long wallet errors wrap instead of running off-screen
+    panel((VW - w) / 2, y, w, h); ls.forEach((l, i) => richText(l, VW / 2, y + 4 + i * 10, '#fff8e8', 'center')); }
+  else if (padOn() && G.state === 'play' && !G.menu && !G.dialog) richText(powersOn() && G.p && PW.ensure(G.p).eq ? '{a} attack {b} dodge {y} howl {x} power {rb} swap {st} menu' : '{a} attack {b} dodge {y} howl {lb} rest {st} menu', 4, VH - 20, '#e8e0ff');
   if (G.fade > 0) { ctx.fillStyle = `rgba(10,8,20,${G.fade})`; ctx.fillRect(0, 0, VW, VH); }
 }
 // ---------------- loop ----------------
@@ -873,7 +933,7 @@ cv.addEventListener('pointerdown', (e) => { Audio8.unlock(); if (G.state === 'ti
 document.addEventListener('visibilitychange', () => { last = performance.now(); });
 const powBtn = document.getElementById('powBtn');
 setInterval(() => { if (powBtn) { const eq = G.mode === 'story' && G.p ? G.p.powers?.eq : ''; powBtn.style.setProperty('--cd', eq && G.cds[eq] ? (G.cds[eq] / PW.ABILITIES[eq].cd).toFixed(3) : '0'); } document.body.classList.toggle('title', G.state === 'title'); document.body.classList.toggle('vault', !!G.menu && VAULT_MENUS.includes(G.menu.title)); }, 150);
-G.spawnEnemyAt = spawnEnemy; G.newGame = newGame; G.toTitle = toTitle; G.pauseMenu = pauseMenu; G.dailyMenu = dailyMenu;
+G.PAD = PAD; G.GP = GP; G.die = die; G.spawnEnemyAt = spawnEnemy; G.newGame = newGame; G.toTitle = toTitle; G.pauseMenu = pauseMenu; G.dailyMenu = dailyMenu;
 G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb; G.LILY_COUNT = C.LILY_COUNT; G.GAME_TITLE = GAME_TITLE;
 // 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.
 globalThis.__inuHome = { busy: () => G.state !== 'title' ? 'Go back to Inu Verse? Your story is saved first.' : false, save: () => { try { saveGame(true); } catch {} } };
