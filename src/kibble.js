@@ -105,6 +105,11 @@ export const COSMETICS = {
   aura_frog: { kind: 'aura', name: 'Lilypad Glow', color: '#58c45a', shop: 60000 }, beam_rainbow: { kind: 'beam', name: 'Rainbow Ripple', color: 'rainbow', shop: 95000 },
   outfit_tux: { kind: 'outfit', name: 'Pond Night Tux', equip: { top: 'tux_black', bottom: 'slacks_black', feet: 'loafers', neck: 'bowtie' }, shop: 120000 },
   title_wish: { kind: 'title', name: 'Friend of Pondo', shop: 30000 },
+  // Daily challenge rewards (free: earned by play only, never sold, no prize effect)
+  daily_firefly: { kind: 'bolt', name: 'Dusk Fireflies', color: '#ffe38a', forms: [2, 3], daily: true }, daily_kits: { kind: 'title', name: 'Kit Wrangler', daily: true },
+  daily_meadow: { kind: 'title', name: 'Butterfly Friend', daily: true }, daily_howl: { kind: 'title', name: 'Howl Maestro', daily: true },
+  daily_trail: { kind: 'title', name: 'Trail Sniffer', daily: true }, daily_boar: { kind: 'title', name: 'Boar Bonker', daily: true },
+  daily_friend: { kind: 'title', name: 'Good Neighbour', daily: true }, daily_picnic: { kind: 'outfit', name: 'Picnic Shirt', equip: { top: 'hawaiian', bottom: 'chinos', feet: 'sneakers_red' }, daily: true },
 };
 const tierRank = (id) => TIERS.findIndex((t) => t.id === id);
 export const unlockedByTier = (holdU) => Object.keys(COSMETICS).filter((k) => COSMETICS[k].tier && tierRank(COSMETICS[k].tier) <= tierRank(tierFor(holdU).id));

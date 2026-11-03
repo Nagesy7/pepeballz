@@ -44,3 +44,14 @@ body.vault #vaultLink{display:block}
 @media (max-height:400px){#vaultLink{font-size:11px;padding:5px 10px;top:calc(3px + env(safe-area-inset-top))}}
 /* landscape touch: the shared kibble-pay wallet/home widgets sit top-right, so the menu button drops below them */
 @media (orientation:landscape){ body.touch #menuBtn{top:calc(64px + env(safe-area-inset-top))} }
+
+/* power button (abilities): only when one is learned (story mode). --cd = cooldown fraction left */
+.b.pw{display:none;width:50px;height:50px;right:150px;bottom:104px;background:#5a8a3add;font-size:18px;overflow:hidden}
+body.haspow .b.pw{display:flex}
+.b.pw::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#000a calc(var(--cd,0) * 1turn),transparent 0);pointer-events:none}
+/* persistent mute toggle (also M key / Menu > Sound & feel) */
+#muteBtn{position:absolute;z-index:4;right:calc(10px + env(safe-area-inset-right));top:calc(110px + env(safe-area-inset-top));width:34px;height:34px;border-radius:50%;border:2px solid #1a1420;
+  background:#2b2440cc;color:#fff8e8;font:16px/1 sans-serif;padding:0;cursor:pointer;touch-action:manipulation;box-shadow:0 2px 0 #0008}
+#muteBtn[aria-pressed=true]{background:#6a2c40cc}
+@media (orientation:landscape){ body.touch #muteBtn{top:calc(69px + env(safe-area-inset-top));right:calc(62px + env(safe-area-inset-right))} }
+@media (orientation:portrait){ body.touch #muteBtn{top:auto;bottom:calc(173px + env(safe-area-inset-bottom));right:auto;left:calc(50% + 32px)} }
