@@ -36,7 +36,8 @@ export function createAmbient() {
       A.drag.length = Math.min(A.drag.length, cap.drag);
       for (const d of A.drag) { d.t -= dt; if (d.t <= 0) { const p = nearWater(); d.tx = p[0]; d.ty = p[1]; d.t = 0.8 + rnd() * 1.8; } d.x += (d.tx - d.x) * Math.min(1, dt * 3); d.y += (d.ty - d.y) * Math.min(1, dt * 3); } }
     // butterflies: daytime, flowers, gently flee; catchable by touching them
-    const flyCap = outdoor && A.flowers.length ? Math.round(cap.fly * (1 - night * 0.8)) : 0;
+    // butterflies are day-only: any dusk/night (night > 0) clears them so only fireflies fly
+    const flyCap = outdoor && A.flowers.length && !(night > 0) ? cap.fly : 0;
     while (A.fly.length < flyCap) { const f = pick(A.flowers); A.fly.push({ x: f[0] * TILE + 8, y: f[1] * TILE + 8, tx: f[0] * TILE + 8, ty: f[1] * TILE + 8, t: 0, ph: rnd() * 6, col: pick(FLY_COLS), z: 8 }); }
     A.fly.length = Math.min(A.fly.length, Math.max(flyCap, 0));
     for (const b of A.fly) { b.t -= dt; b.ph += dt * 14; if (b.t <= 0) { const f = rnd() < 0.6 ? pick(A.flowers) : [b.x / TILE + (rnd() - 0.5) * 6, b.y / TILE + (rnd() - 0.5) * 4]; b.tx = f[0] * TILE + 8; b.ty = f[1] * TILE + 8; b.t = 2 + rnd() * 3; }

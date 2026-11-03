@@ -78,7 +78,8 @@ let apiEntries = null; try { const g = async (p) => (await (await fetch(FD.FEED_
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }); const page = await ctx.newPage(); const errs = []; watch(page, errs);
   await page.goto(url('time=night')); await ready(page); await story(page);
   await page.evaluate(() => { const G = window.__pb; G.enterArea('forest', 30, 15); G.enemies.length = 0; G.pl.x = G.amb.water.length ? G.amb.water[0][0] * 16 - 24 : G.pl.x; }); await page.waitForTimeout(2500);
-  const a = await page.evaluate(() => ({ ff: window.__pb.amb.ff.length, ripple: window.__pb.amb.ripple.length, leaf: window.__pb.amb.leaf.length }));
+  const a = await page.evaluate(() => ({ ff: window.__pb.amb.ff.length, fly: window.__pb.amb.fly.length, flowers: window.__pb.amb.flowers.length, ripple: window.__pb.amb.ripple.length, leaf: window.__pb.amb.leaf.length }));
+  check('ambient: no butterflies at night (fireflies only)', a.fly === 0 && a.flowers > 0, JSON.stringify(a));
   check('ambient: forest at dusk/night has fireflies', a.ff > 0, JSON.stringify(a)); await shot(page, 'forest-night-ambient.png');
   check('night: no console errors', errs.length === 0, errs.slice(0, 3).join(' / ')); await ctx.close(); }
 
