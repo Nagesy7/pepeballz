@@ -52,6 +52,9 @@ export function realWallet(sdk) { const w = sdk.asPepeBallzWallet(), live = () =
     async burn(o) { return live() ? w.burn(o) : { ok: false, reason: SOON_MSG }; },
     async inventory() { return (await sdk.inventory(GAME))?.[GAME] || {}; } }; }
 export let walletUi = null;
+// Public Kibble site (Shop / For devs links). The API base below is kibble-pay.vercel.app, a different host from the
+// kibbleinu.com links the spec asks for, so it gets its own constant here instead of reusing the API base. See src/shop.js.
+export const KIBBLE_SITE = 'https://kibbleinu.com';
 export async function initKibble(apiBase = 'https://kibble-pay.vercel.app') {
   glue = await import(apiBase + '/inu-games.js'); glue.mountFooter(DEMO ? 'demo' : 'soon');
   if (DEMO) return { mode };

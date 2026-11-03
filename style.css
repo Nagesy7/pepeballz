@@ -55,3 +55,10 @@ body.haspow .b.pw{display:flex}
 #muteBtn[aria-pressed=true]{background:#6a2c40cc}
 @media (orientation:landscape){ body.touch #muteBtn{top:calc(69px + env(safe-area-inset-top));right:calc(62px + env(safe-area-inset-right))} }
 @media (orientation:portrait){ body.touch #muteBtn{top:auto;bottom:calc(173px + env(safe-area-inset-bottom));right:auto;left:calc(50% + 32px)} }
+/* Shop link + run-end nudge: DOM rows laid over the canvas menu (positioned per frame by syncMenuDom in src/game.js) */
+.menuDom{display:none;position:fixed;z-index:6;margin:0;padding:0 4px;box-sizing:border-box;pointer-events:auto;touch-action:manipulation;
+  font-family:"Trebuchet MS",Verdana,sans-serif;font-weight:700;white-space:nowrap;color:#fff8e8;background:none;border:0;border-radius:3px;text-decoration:none;cursor:pointer;text-shadow:1px 1px 0 #1a1420}
+.menuDom.on{display:block}
+.menuDom.sel,.menuDom:hover,.menuDom:focus-visible{color:#ffe066;outline:none}
+#shopNudge{cursor:default;white-space:normal;color:#f6e7c8;font-weight:400;padding:0;pointer-events:none}
+#shopNudge p{margin:0}

@@ -12,9 +12,19 @@ import * as DY from './daily.js';
 import * as FD from './feed.js';
 import * as PW from './powers.js'; import * as GP from './gamepad.js';
 import * as ST from './settings.js';
+import * as SH from './shop.js';
 import { createAmbient, createPerf, nightFactor } from './ambient.js';
 document.title = GAME_FULL_TITLE;
 { const a = document.getElementById('vaultLink'); if (a) { a.href = K.VAULT_URL; a.innerHTML = `<b>${K.VAULT_NAME}</b> ${K.VAULT_SHORT} <u>View on Solscan ↗</u>`; a.title = K.OWNER_WALLET; } }
+// Shop link + run-end nudge: real DOM <a>/<button>s laid over their canvas menu rows (the pixel font has no emoji, and taps/clicks
+// need a real link). Keyboard/gamepad pick the same rows in the canvas menu, which click these elements. New tab, rel=noopener.
+const $id = (i) => document.getElementById(i);
+{ const sl = $id('shopLink'), ns = $id('nudgeShop'), nn = $id('nudgeNo'), nt = $id('shopNudgeText');
+  if (sl) { sl.href = SH.SHOP_URL; sl.textContent = SH.COPY.shop; sl.title = SH.COPY.shopTitle; sl.addEventListener('click', () => SH.trackPaidLink('shop', 'menu')); }
+  if (ns) { ns.href = SH.NUDGE_SHOP_URL; ns.textContent = SH.COPY.nudgeYes; ns.title = SH.COPY.shopTitle; ns.addEventListener('click', () => { SH.trackPaidLink('shop', 'results'); SH.markNudge(sessionStorage, 'clicked'); hideNudge(); }); }
+  if (nn) { nn.textContent = SH.COPY.nudgeNo; nn.addEventListener('click', () => { SH.markNudge(sessionStorage, 'dismissed'); hideNudge(); }); }
+  if (nt) nt.textContent = SH.COPY.nudge; }
+function hideNudge() { const m = G.menu; if (!m?.nudge) return; m.nudge = false; const n = (typeof m.items === 'function' ? m.items() : m.items).length; m.sel = Math.min(m.sel, n - 1); }
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const A = buildArt(), W = buildWorld();
@@ -214,7 +224,8 @@ function pauseMenu() {
     { label: 'Items', act: itemsMenu }, { label: `Stats${P().points ? ` (+${P().points})` : ''}`, act: statsMenu },
     { label: 'Pond Network', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
     ...(G.mode === 'story' ? [{ label: `Powers${PW.ensure(P()).eq ? ': ' + PW.ABILITIES[P().powers.eq].name : ''}`, act: powersMenu }] : []),
-    { label: 'Daily & recent runs', act: dailyMenu }, { label: 'Sound & feel', act: settingsMenu }, { label: 'Close', act: closeMenu } ] });
+    { label: 'Daily & recent runs', act: dailyMenu }, { label: 'Sound & feel', act: settingsMenu }, { label: 'Close', act: closeMenu },
+    { label: 'Shop', dom: 'shopLink', sub: SH.COPY.shopTitle, act: () => $id('shopLink')?.click() } ] }); // last item (spec); opens kibbleinu.com in a new tab
 }
 function settingsMenu() {
   const on = (v) => (v ? 'on' : 'off'), FX = ['auto', 'low', 'high'];
@@ -561,8 +572,10 @@ function finishRun() {
   const key = board === 'rush' ? 'rush' : 'huntRuns'; n[key] ||= []; n[key].push({ ...row, period: board === 'rush' ? r.day : r.week }); if (n[key].length > 40) n[key].shift();
   const ranked = K.rankRuns([...K.sampleRows(board, board === 'rush' ? r.day : r.week), ...bestMine(board)]); const mine = ranked.find((x) => x.id === 'you');
   K.addPackPoints(G.root, board === 'rush' ? 'rushClear' : 'huntFinish'); if (mine.rank <= 3) K.addPackPoints(G.root, board === 'rush' ? 'rushTop3' : 'huntTop3'); saveNet();
-  setTimeout(() => { G.boss = null; openMenu({ title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, K.DEMO ? `Your rank: #${mine.rank} of ${ranked.length} (demo rivals)` : (G.posted || (K.getWallet().address ? 'Posting to the prize board…' : 'Sign in (Pond Network) to post runs to the prize board')), n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
-    items: [{ label: 'View leaderboards', act: leaderboardsMenu }, { label: 'Return to story', act: () => endRun(true) }] }); }, 600);
+  setTimeout(() => { G.boss = null; const nudge = SH.nudgeAllowed(window.sessionStorage); if (nudge) SH.markNudge(window.sessionStorage, 'shown'); // cosmetics nudge: run-end only, once per session
+    const base = [{ label: 'View leaderboards', act: leaderboardsMenu }, { label: 'Return to story', act: () => endRun(true) }];
+    const rm = { title: board === 'rush' ? 'Boss Rush clear!' : 'Hunt complete!', noBack: true, nudge, info: () => [`Time ${fmtTime(ms)}   Deaths ${r.deaths}`, K.DEMO ? `Your rank: #${mine.rank} of ${ranked.length} (demo rivals)` : (G.posted || (K.getWallet().address ? 'Posting to the prize board…' : 'Sign in (Pond Network) to post runs to the prize board')), n.pack.tag ? `Pack [${n.pack.tag}] points: ${n.pack.points}` : 'Join a pack to earn Kibble Cup points'],
+    items: () => (rm.nudge ? [...base, { label: 'Visit the shop', dom: 'nudgeShop', act: () => $id('nudgeShop')?.click() }, { label: 'Not now', dom: 'nudgeNo', act: () => $id('nudgeNo')?.click() }] : base) }; openMenu(rm); }, 600);
 }
 function endRun() { G.menu = null; G.mode = 'story'; G.pu = {}; G.run = null; G.hunt = null; G.boss = null; if (storySave) { G.p = storySave; enterArea(G.p.area, G.p.x / TILE, G.p.y / TILE); G.state = 'play'; } else toTitle(); }
 const fmtTime = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}.${String(Math.floor(ms / 10) % 100).padStart(2, '0')}`;
@@ -939,11 +952,16 @@ function drawDialog() {
 function drawMenu() {
   const m = G.menu, items = m._items || (typeof m.items === 'function' ? m.items() : m.items); const info = m.info ? m.info().filter(Boolean).flatMap((l) => wrap(l, Math.min(VW - 12, 330) - 20)) : [];
   if (m.titleScreen) { const w = 130, x = Math.floor((VW - w) / 2), y = Math.min(VH - 60, G.titleMenuY || Math.floor(VH * 0.62)); items.forEach((it, i) => { const sel = i === m.sel; text((sel ? '> ' : '  ') + it.label, x + 10, y + i * 13, sel ? '#ffe066' : '#fff', 9); }); if (padOn()) richText('{a} select  {st} start', VW / 2, y + items.length * 13 + 1, '#e8e0ff', 'center'); return; }
-  const w = Math.min(VW - 12, 330), lineH = 12, h = 22 + info.length * 10 + items.length * lineH + (items[m.sel]?.sub ? 20 : 6), x = Math.floor((VW - w) / 2), y = Math.max(4, Math.floor((VH - h) / 2));
+  const nh = m.nudge ? 6 + 10 * (G.nudgeLines || 3) : 0; // room for the DOM nudge copy (#shopNudge), between the info lines and the buttons
+  const w = Math.min(VW - 12, 330), lineH = 12, h = 22 + info.length * 10 + nh + items.length * lineH + (items[m.sel]?.sub ? 20 : 6), x = Math.floor((VW - w) / 2), y = Math.max(4, Math.floor((VH - h) / 2));
   ctx.fillStyle = 'rgba(10,8,20,.55)'; ctx.fillRect(0, 0, VW, VH); panel(x, y, w, h); text(m.title, x + 10, y + 7, '#ffe066', 9);
   if (G.shiba && /Pond Network|clear!|complete!/.test(m.title)) { G.shibaC ||= G.shiba.canvas(1); const c = G.shibaC; ctx.drawImage(c, x + w - c.width - 6, y + 4); text(G.shiba.profile.name, x + w - 6 - c.width / 2, y + 8 + c.height, '#ffe066', 6, 'center'); } // your Inu Verse Shiba (shared profile)
   info.forEach((l, i) => text(l, x + 10, y + 20 + i * 10, /^(DEMO|KIBBLE launching|LIVE)/.test(l) ? '#ff9ac8' : '#cfc6e6', 7));
-  const iy = y + 22 + info.length * 10; items.forEach((it, i) => { const sel = i === m.sel; if (sel) R(x + 5, iy + i * lineH - 2, w - 10, lineH, '#4a4068'); text((sel ? '> ' : '  ') + it.label, x + 10, iy + i * lineH, it.disabled ? '#8a84a0' : sel ? '#ffe066' : '#fff8e8', 8); });
+  const dom = G._dom = { rows: [], nudge: nh ? { gx: x + 10, gy: y + 20 + info.length * 10 + 2, gw: w - 20, gh: nh - 4 } : null };
+  if (nh) { R(x + 8, y + 20 + info.length * 10, w - 16, nh - 2, '#2b2440'); R(x + 8, y + 20 + info.length * 10, 2, nh - 2, '#f6c94c'); }
+  const iy = y + 22 + info.length * 10 + nh; items.forEach((it, i) => { const sel = i === m.sel; if (sel) R(x + 5, iy + i * lineH - 2, w - 10, lineH, '#4a4068');
+    if (it.dom) { text(sel ? '>' : ' ', x + 10, iy + i * lineH, '#ffe066', 8); dom.rows.push({ id: it.dom, gx: x + 10 + measure('  '), gy: iy + i * lineH - 2, gh: lineH, sel }); return; } // label drawn by the DOM element
+    text((sel ? '> ' : '  ') + it.label, x + 10, iy + i * lineH, it.disabled ? '#8a84a0' : sel ? '#ffe066' : '#fff8e8', 8); });
   const sub = items[m.sel]?.sub; if (sub) wrap(sub, w - 20, 7).slice(0, 2).forEach((l, i) => text(l, x + 10, iy + items.length * lineH + 3 + i * 9, '#9effa0', 7));
   if (padOn()) richText(`{a} select${items.some((q) => q.lr) ? '  stick/D-pad <> adjust' : ''}${m.noBack ? '' : '  {b} back'}${G.state === 'play' && !m.noBack ? '  {st} close' : ''}`, x + w / 2, Math.min(VH - 9, y + h + 3), '#e8e0ff', 'center');
 }
@@ -977,12 +995,23 @@ function render() {
   if (G.state === 'title') drawTitle(); else { drawWorld(); drawHUD(); }
   if (G.banner) { const a = Math.min(1, G.banner.t * 2); ctx.globalAlpha = a; const w = Math.min(VW - 20, G.banner.text.length * 7 + 30); panel((VW - w) / 2, VH * 0.2, w, 20); text(G.banner.text, VW / 2, VH * 0.2 + 6, '#ffe066', 9, 'center'); ctx.globalAlpha = 1; }
   if (G.dialog) drawDialog();
-  if (G.menu) drawMenu();
+  if (G.menu) drawMenu(); else G._dom = null;
+  syncMenuDom();
   if (G.toast) { const ls = wrap(G.toast.msg, VW - 40).slice(0, 4), w = Math.min(VW - 20, Math.max(...ls.map((l) => richW(l))) + 20), h = 8 + ls.length * 10, y = VH - h - 10; // long wallet errors wrap instead of running off-screen
     panel((VW - w) / 2, y, w, h); ls.forEach((l, i) => richText(l, VW / 2, y + 4 + i * 10, '#fff8e8', 'center')); }
   else if (padOn() && G.state === 'play' && !G.menu && !G.dialog) richText(powersOn() && G.p && PW.ensure(G.p).eq ? '{a} attack {b} dodge {y} howl {x} power {rb} swap {st} menu' : '{a} attack {b} dodge {y} howl {lb} rest {st} menu', 4, VH - 20, '#e8e0ff');
   if (G.fade > 0) { ctx.fillStyle = `rgba(10,8,20,${G.fade})`; ctx.fillRect(0, 0, VW, VH); }
 }
+const MENU_DOM = ['shopLink', 'nudgeShop', 'nudgeNo', 'shopNudge'];
+function syncMenuDom() { // place the DOM link rows / nudge copy exactly over their canvas menu rows; hide them when no menu wants them
+  const d = G._dom, on = new Set(), cr = d ? cv.getBoundingClientRect() : null, k = SCALE / DPR, px = (v) => Math.round(v * 10) / 10 + 'px';
+  if (d) { for (const r of d.rows) { const el = $id(r.id); if (!el) continue; on.add(r.id); const st = el.style;
+      st.left = px(cr.left + r.gx * k); st.top = px(cr.top + r.gy * k); st.height = st.lineHeight = px(r.gh * k); st.fontSize = px(8 * k); el.classList.toggle('sel', r.sel); }
+    const n = d.nudge, box = $id('shopNudge'); if (n && box) { on.add('shopNudge'); const st = box.style; st.left = px(cr.left + n.gx * k); st.top = px(cr.top + n.gy * k); st.width = px(n.gw * k); st.fontSize = px(7 * k); st.lineHeight = px(10 * k);
+      const lines = Math.max(2, Math.min(6, Math.ceil(box.scrollHeight / (10 * k) - 0.05))); if (box.classList.contains('on') && lines !== G.nudgeLines) G.nudgeLines = lines; } }
+  for (const id of MENU_DOM) $id(id)?.classList.toggle('on', on.has(id));
+}
+G.SH = SH; G.finishRun = finishRun;
 // ---------------- loop ----------------
 let last = performance.now();
 function frame(now) { if (document.hidden) { last = now; return requestAnimationFrame(frame); } const raw = (now - last) / 1000, dt = Math.max(0, Math.min(0.05, raw)); last = now; G.perf.sample(raw); G.fps = G.perf.fps; try { update(dt); render(); } catch (e) { console.error(e); window.__pbErr = String(e.stack || e); } for (const k in pressed) pressed[k] = false; requestAnimationFrame(frame); }
