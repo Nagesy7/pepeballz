@@ -277,7 +277,7 @@ function pauseMenu() {
   openMenu({ title: 'Menu', items: () => [
     { label: 'Items', act: itemsMenu }, { label: `Stats${P().points ? ` (+${P().points})` : ''}`, act: statsMenu },
     { label: 'Pond Network', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
-    ...(G.mode === 'story' ? [{ label: `Powers${PW.ensure(P()).eq ? ': ' + PW.ABILITIES[P().powers.eq].name : ''}${GD.badgeOn(STORE) ? '  · new' : ''}`, act: powersMenu }] : []),
+    ...(G.mode === 'story' ? [{ label: `Powers${PW.ensure(P()).eq ? ': ' + PW.ABILITIES[P().powers.eq].name : ''}${GD.badgeOn(STORE) ? ' *' : ''}`, act: powersMenu }] : []),
     { label: 'Daily & recent runs', act: dailyMenu }, { label: 'Sound & feel', act: settingsMenu }, { label: 'Close', act: closeMenu },
     { label: 'Shop', dom: 'shopLink', sub: SH.COPY.shopTitle, act: () => $id('shopLink')?.click() } ] }); // last item (spec); opens kibbleinu.com in a new tab
 }

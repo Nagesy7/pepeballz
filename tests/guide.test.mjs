@@ -96,7 +96,7 @@ test('game wires guide: tip DOM, badge, story-only, no Mememon / rename', () => 
   assert.match(game, /maybeGuideUpgrades\(true\)/);
   assert.match(game, /maybeGuideCollar/);
   assert.match(game, /GD\.clearBadge\(STORE\)/);
-  assert.match(game, /· new/);
+  assert.match(game, /\$\{GD\.badgeOn\(STORE\) \? ' \*' : ''\}/);
   assert.match(game, /hideGuideTip\(\); G\.guideQ = null/);
   assert.match(html, /id="guideTip"/);
   assert.match(html, /id="guideOk"/);

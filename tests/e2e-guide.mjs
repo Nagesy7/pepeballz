@@ -82,7 +82,7 @@ for (const dev of [
     const pow = items.find((i) => /^Powers/.test(i.label));
     return { title: window.__pb.menu?.title, powers: pow?.label || '', badge: document.getElementById('menuBtn').classList.contains('guide-badge') };
   });
-  check(`${t}: Powers row shows new badge`, menu.title === 'Menu' && /· new/.test(menu.powers), JSON.stringify(menu));
+  check(`${t}: Powers row shows new badge`, menu.title === 'Menu' && /\*/.test(menu.powers), JSON.stringify(menu));
   check(`${t}: menuBtn still badged`, menu.badge);
   await p.screenshot({ path: `${OUT}${t}-02-menu-badge.png` });
 
@@ -111,7 +111,7 @@ for (const dev of [
     const pow = items.find((i) => /^Powers/.test(i.label));
     return { powers: pow?.label || '', badgeStore: window.__pb.GD.badgeOn(localStorage), menuBadge: document.getElementById('menuBtn').classList.contains('guide-badge') };
   });
-  check(`${t}: badge cleared after opening Powers`, !after.badgeStore && !after.menuBadge && !/· new/.test(after.powers), JSON.stringify(after));
+  check(`${t}: badge cleared after opening Powers`, !after.badgeStore && !after.menuBadge && !/\*/.test(after.powers), JSON.stringify(after));
   await p.screenshot({ path: `${OUT}${t}-03-badge-cleared.png` });
   await G(() => { window.__pb.menu = null; });
 
