@@ -13,6 +13,7 @@ import * as FD from './feed.js';
 import * as PW from './powers.js'; import * as GP from './gamepad.js';
 import * as ST from './settings.js';
 import * as SH from './shop.js';
+import * as GD from './guide.js';
 import { createAmbient, createPerf, nightFactor } from './ambient.js';
 document.title = GAME_FULL_TITLE;
 { const a = document.getElementById('vaultLink'); if (a) { a.href = K.VAULT_URL; a.innerHTML = `<b>${K.VAULT_NAME}</b> ${K.VAULT_SHORT} <u>View on Solscan ↗</u>`; a.title = K.OWNER_WALLET; } }
@@ -25,6 +26,59 @@ const $id = (i) => document.getElementById(i);
   if (nn) { nn.textContent = SH.COPY.nudgeNo; nn.addEventListener('click', () => { SH.markNudge(sessionStorage, 'dismissed'); hideNudge(); }); }
   if (nt) nt.textContent = SH.COPY.nudge; }
 function hideNudge() { const m = G.menu; if (!m?.nudge) return; m.nudge = false; const n = (typeof m.items === 'function' ? m.items() : m.items).length; m.sel = Math.min(m.sel, n - 1); }
+
+// ---- first-run power guide (tooltips + menu badge) ----
+const guideEls = () => ({ tip: $id('guideTip'), title: $id('guideTitle'), body: $id('guideBody'), ok: $id('guideOk'), skip: $id('guideSkip'), menu: $id('menuBtn') });
+function syncGuideBadge() {
+  const on = G.mode === 'story' && GD.badgeOn(STORE);
+  guideEls().menu?.classList.toggle('guide-badge', !!on);
+  return on;
+}
+function hideGuideTip() {
+  const { tip } = guideEls(); if (!tip) return;
+  tip.classList.remove('on'); tip.hidden = true; G.guide = null;
+}
+function showGuideTip(id) {
+  if (G.mode !== 'story' || G.state !== 'play') return false; // story only; never mid prize-run
+  if (G.guide?.id === id) return true;
+  if (GD.seen(STORE, id)) return false;
+  const tip = GD.tipFor(id), els = guideEls(); if (!els.tip) return false;
+  els.title.textContent = tip.title; els.body.textContent = tip.body;
+  els.ok.textContent = GD.COPY.ok; els.skip.textContent = GD.COPY.skip;
+  els.tip.hidden = false; els.tip.classList.add('on'); G.guide = { id }; G.menu = null; // pause: no combat under the tip
+  Audio8.sfx('select'); return true;
+}
+function dismissGuide(skip) {
+  const id = G.guide?.id; if (!id) return;
+  if (skip) GD.skipAll(STORE); else GD.markSeen(STORE, id);
+  hideGuideTip(); syncGuideBadge();
+}
+function queueGuide(id) { // show now if safe, else wait until between actions (no menu/dialog/boss fight)
+  if (G.mode !== 'story' || GD.seen(STORE, id) || G.guide) return; // never queue in Hunt/Boss Rush/Tourney
+  G.guideQ = id;
+}
+function flushGuideQueue() {
+  const id = G.guideQ; if (!id || G.guide || G.menu || G.dialog || G.state !== 'play' || G.mode !== 'story') return;
+  // avoid popping over a live boss intro / active boss fight mid-hop; banners are fine (we pause under the tip)
+  if (G.boss && G.boss.st !== 'down') return;
+  G.guideQ = null; showGuideTip(id);
+}
+function onUpgradeAvailable() {
+  if (G.mode !== 'story' || !G.p) return;
+  if (GD.hasAffordableUpgrade(G.p)) { GD.setBadge(STORE, true); syncGuideBadge(); }
+}
+function maybeGuideUpgrades(leveled) {
+  if (G.mode !== 'story' || !G.p) return;
+  onUpgradeAvailable();
+  if (GD.shouldOfferUpgrades(STORE, G.p, { leveled: !!leveled })) queueGuide('upgrades');
+}
+function maybeGuideCollar(fromTier, toTier) {
+  if (G.mode !== 'story') return;
+  if (GD.shouldOfferCollar(STORE, fromTier, toTier)) queueGuide('collar');
+}
+{ const els = guideEls();
+  els.ok?.addEventListener('click', (e) => { e.preventDefault(); dismissGuide(false); });
+  els.skip?.addEventListener('click', (e) => { e.preventDefault(); dismissGuide(true); }); }
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const A = buildArt(), W = buildWorld();
@@ -223,7 +277,7 @@ function pauseMenu() {
   openMenu({ title: 'Menu', items: () => [
     { label: 'Items', act: itemsMenu }, { label: `Stats${P().points ? ` (+${P().points})` : ''}`, act: statsMenu },
     { label: 'Pond Network', act: networkMenu }, { label: G.mode === 'story' ? 'Save game' : 'Abandon run', act: () => { if (G.mode === 'story') { saveGame(); closeMenu(); } else { G.menu = null; endRun(false); } } },
-    ...(G.mode === 'story' ? [{ label: `Powers${PW.ensure(P()).eq ? ': ' + PW.ABILITIES[P().powers.eq].name : ''}`, act: powersMenu }] : []),
+    ...(G.mode === 'story' ? [{ label: `Powers${PW.ensure(P()).eq ? ': ' + PW.ABILITIES[P().powers.eq].name : ''}${GD.badgeOn(STORE) ? '  · new' : ''}`, act: powersMenu }] : []),
     { label: 'Daily & recent runs', act: dailyMenu }, { label: 'Sound & feel', act: settingsMenu }, { label: 'Close', act: closeMenu },
     { label: 'Shop', dom: 'shopLink', sub: SH.COPY.shopTitle, act: () => $id('shopLink')?.click() } ] }); // last item (spec); opens kibbleinu.com in a new tab
 }
@@ -246,7 +300,7 @@ function dailyLines() { const d = G.daily, c = DY.current(d), cos = K.COSMETICS[
 function feedRows() { return FD.feedLines(G.feed); }
 function dailyMenu() { if (G.t - _feedT > 30) refreshFeed();
   openMenu({ title: 'Daily & recent runs', info: () => [...dailyLines(), 'Bones + cosmetics only. No wagers or fees, no effect on prize boards.', 'Recent runs (real, wallet-signed):', ...feedRows()], items: [{ label: 'Refresh recent runs', act: () => refreshFeed() }, { label: 'Back', act: closeMenu }] }); }
-function powersMenu() { const p = P(); PW.ensure(p);
+function powersMenu() { const p = P(); PW.ensure(p); GD.clearBadge(STORE); syncGuideBadge();
   openMenu({ title: 'Powers', info: () => ['Bones earned in play only. Never sold for $KIBBLE.', 'Off in prize runs: boards stay skill-only.', `Bones ${p.bones}  Lv ${p.level}  Look: ${PW.COLLARS[PW.collarTier(p)].name}`],
     items: () => [...PW.ABILITY_IDS.map((id) => { const a = PW.ABILITIES[id], own = p.powers.owned.includes(id), eq = p.powers.eq === id, st = own ? PW.abilityStats(p, id) : a;
       return { label: `${a.name}${own ? ' T' + st.tier : ''}: ${own ? (eq ? 'EQUIPPED' : 'equip') : `learn ${a.bones} bones`}`, sub: `${a.desc} Cooldown ${st.cd}s.${own ? '' : ' Or: ' + a.playUnlock + '.'}`,
@@ -273,7 +327,7 @@ function puUpMenu() { const p = P();
 // Collar look: cosmetic only. Fires the paw-burst when the look steps up; prize runs only show the story look, never stats.
 function lookTier() { const p = P(); if (!p) return 0; return powersOn() ? PW.collarTier(p) : (p.lookTier || 0); }
 function collarCheck(fx = true) { const p = P(); if (!p || G.mode !== 'story') return; const pw = PW.ensure(p), t = PW.collarTier(p);
-  if (pw.look == null || !fx) { pw.look = t; return; } if (t > pw.look) { pw.look = t; const c = PW.COLLARS[t]; G.tierFx = { t: 0, tier: t }; G.banner = { text: `${c.name}!`, t: 2.4 }; Audio8.sfx('level'); } else pw.look = t; }
+  if (pw.look == null || !fx) { pw.look = t; return; } if (t > pw.look) { const from = pw.look; pw.look = t; const c = PW.COLLARS[t]; G.tierFx = { t: 0, tier: t }; G.banner = { text: `${c.name}!`, t: 2.4 }; Audio8.sfx('level'); maybeGuideCollar(from, t); } else pw.look = t; }
 G.lookTier = lookTier; G.collarCheck = collarCheck;
 function itemsMenu() {
   openMenu({ title: 'Items', info: () => [`HP ${Math.ceil(P().hp)}/${D().maxHp}   Energy ${Math.floor(P().energy)}/${D().maxEnergy}`, `Bones ${P().bones}   Pond Lilies ${P().orbs.length}/${C.LILY_COUNT}`, ...C.LILIES.filter((l) => P().orbs.includes(l.id)).map((l) => `${l.name}: ${l.buff}`)],
@@ -389,12 +443,13 @@ function killEnemy(e) {
   if (Math.random() < 0.12) G.drops.push({ x: e.x, y: e.y, id: 'bone', t: 12 });
   else if (Math.random() < PW.DROP_CHANCE) spawnPowerup(null, e.x, e.y);
   checkPowerUnlocks();
-  if (ups) { Audio8.sfx('level'); G.banner = { text: `Level up! Lv ${P().level}  (+${ups * 3} stat points)`, t: 3 }; burst(pl.x, pl.y - 16, '#ffe066', 30, 90); }
+  if (ups) { Audio8.sfx('level'); G.banner = { text: `Level up! Lv ${P().level}  (+${ups * 3} stat points)`, t: 3 }; burst(pl.x, pl.y - 16, '#ffe066', 30, 90); maybeGuideUpgrades(true); }
+  else onUpgradeAvailable();
 }
 G.drops = [];
 function checkPowerUnlocks() { if (G.mode !== 'story' || !G.p) return; const n = PW.checkUnlocks(P());
   for (const id of n) { const a = PW.ABILITIES[id]; G.banner = { text: `New power: ${a.name}!`, t: 3 }; toast(`${a.desc} Press E or tap the power button (cooldown ${a.cd}s)`, 4); Audio8.sfx('level'); }
-  if (n.length) { syncPowerBtn(); collarCheck(); } }
+  if (n.length) { syncPowerBtn(); collarCheck(); onUpgradeAvailable(); } }
 function syncPowerBtn() { const b = document.getElementById('powBtn'), eq = G.mode === 'story' && G.p ? PW.ensure(G.p).eq : ''; document.body.classList.toggle('haspow', !!eq);
   if (b && b.dataset.eq !== eq) { b.dataset.eq = eq; b.querySelector('small').textContent = eq ? { spin: 'spin', pounce: 'pounce', bark: 'bark' }[eq] : 'power'; } }
 G.checkPowerUnlocks = checkPowerUnlocks;
@@ -559,6 +614,7 @@ const STD_BUILD = () => { const p = C.newPlayer(); p.level = 6; p.stats = { str:
 let storySave = null;
 function startRun(mode) {
   storySave = G.p ? JSON.parse(JSON.stringify(G.p)) : null; if (G.mode === 'story' && G.p) saveGame(true);
+  hideGuideTip(); G.guideQ = null; // prize runs: no power guide (powers are off)
   const p = STD_BUILD(); p.cosmetics = { ...(storySave?.cosmetics || G.net.cos || p.cosmetics) }; p.lookTier = storySave ? PW.collarTier(storySave) : 0; G.p = p; G.mode = mode; G.menu = null; G.state = 'play'; G.pu = {}; G.cds = {};
   G.run = { mode, t0: performance.now(), deaths: 0, week: K.weekId(Date.now()), day: K.dayId(Date.now()) };
   if (mode === 'rush') { enterArea('mountain', 20, 14); startBoss(false); }
@@ -716,6 +772,12 @@ function update(dt) {
   if (G.state !== 'title' && G.area) updateNPCs(dt); G.parts = G.parts.filter((p) => p.life > 0);
   for (const f of G.floats) { f.y -= (f.big ? 10 + 60 * Math.max(0, f.t - 0.5) : 22) * dt; f.x += (f.vx || 0) * dt; f.t -= dt; } G.floats = G.floats.filter((f) => f.t > 0);
   if (G.fadeTo) { G.fade += dt * 4; if (G.fade >= 1) { const ex = G.fadeTo; G.fadeTo = null; enterArea(ex.to, ex.tx, ex.ty); } return; } else if (G.fade > 0) G.fade = Math.max(0, G.fade - dt * 4);
+  if (G.guide) { // soft pause: tip blocks combat input; dismiss with confirm / back / Escape
+    if (pressed.atk || pressed.menu || pressed.dash || pressed.power) { dismissGuide(false); return; }
+    if (pressed.blast || pressed.back) { dismissGuide(false); return; }
+    return;
+  }
+  flushGuideQueue();
   if (G.menu) return updateMenu(dt);
   if (G.dialog) return updateDialog(dt);
   if (G.state === 'wish') return updateWish(dt);
@@ -997,6 +1059,7 @@ function render() {
   if (G.dialog) drawDialog();
   if (G.menu) drawMenu(); else G._dom = null;
   syncMenuDom();
+  { const tip = guideEls().tip; if (tip) { const on = !!G.guide; tip.classList.toggle('on', on); tip.hidden = !on; } syncGuideBadge(); }
   if (G.toast) { const ls = wrap(G.toast.msg, VW - 40).slice(0, 4), w = Math.min(VW - 20, Math.max(...ls.map((l) => richW(l))) + 20), h = 8 + ls.length * 10, y = VH - h - 10; // long wallet errors wrap instead of running off-screen
     panel((VW - w) / 2, y, w, h); ls.forEach((l, i) => richText(l, VW / 2, y + 4 + i * 10, '#fff8e8', 'center')); }
   else if (padOn() && G.state === 'play' && !G.menu && !G.dialog) richText(powersOn() && G.p && PW.ensure(G.p).eq ? '{a} attack {b} dodge {y} howl {x} power {rb} swap {st} menu' : '{a} attack {b} dodge {y} howl {lb} rest {st} menu', 4, VH - 20, '#e8e0ff');
@@ -1022,6 +1085,7 @@ cv.addEventListener('pointerdown', (e) => { Audio8.unlock(); if (G.state === 'ti
 document.addEventListener('visibilitychange', () => { last = performance.now(); });
 const powBtn = document.getElementById('powBtn');
 setInterval(() => { if (powBtn) { const eq = G.mode === 'story' && G.p ? G.p.powers?.eq : ''; powBtn.style.setProperty('--cd', eq && G.cds[eq] ? Math.min(1, G.cds[eq] / PW.abilityStats(G.p, eq).cd).toFixed(3) : '0'); } document.body.classList.toggle('title', G.state === 'title'); document.body.classList.toggle('vault', !!G.menu && VAULT_MENUS.includes(G.menu.title)); }, 150);
+G.GD = GD; G.showGuideTip = showGuideTip; G.dismissGuide = dismissGuide; G.queueGuide = queueGuide; G.syncGuideBadge = syncGuideBadge; G.maybeGuideUpgrades = maybeGuideUpgrades; G.onUpgradeAvailable = onUpgradeAvailable;
 G.PAD = PAD; G.GP = GP; G.die = die; G.spawnEnemyAt = spawnEnemy; G.newGame = newGame; G.toTitle = toTitle; G.pauseMenu = pauseMenu; G.dailyMenu = dailyMenu; G.powersMenu = powersMenu; G.movesMenu = movesMenu; G.puUpMenu = puUpMenu; G.lookImg = lookImg; G.D = D;
 G.enterArea = enterArea; G.stepCut = updateCut; G.startTourney = startTourney; G.tourneyResult = tourneyResult; G.startTransform = startTransform; G.STAGES = STAGES; G.heroFrame = heroFrame; G.startBoss = startBoss; G.saveGame = saveGame; G.giveOrb = giveOrb; G.LILY_COUNT = C.LILY_COUNT; G.GAME_TITLE = GAME_TITLE;
 // 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.

@@ -28,6 +28,7 @@ const clipHero = async (page, w = 260, h = 220) => { const c = await page.evalua
 const browser = await chromium.launch();
 { const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }); await ctx.addInitScript(MOCK); const page = await ctx.newPage(); const errs = []; watch(page, errs);
   await page.goto(BASE); await page.evaluate(() => localStorage.clear()); await page.reload(); await ready(page); await page.waitForTimeout(600);
+  await page.evaluate(() => { window.__pb.GD.skipAll(localStorage); window.__pb.dismissGuide?.(true); }); // first-run tip covered by e2e-guide.mjs
   await story(page); await page.evaluate(() => window.__plug('Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)')); await page.waitForTimeout(200);
   await setPow(page, { p: { level: 4, bones: 1000 }, owned: [], look: 0 });
   // ---- controller: Start > Powers > learn > Upgrade moves (gated, then bought) ----
@@ -119,7 +120,9 @@ const browser = await chromium.launch();
   check('desktop: no console errors', errs.length === 0, errs.slice(0, 3).join(' / ')); await ctx.close(); }
 { // phone landscape: Moonstone + paw trail + tier-3 moves stay ~60 FPS
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }); const page = await ctx.newPage(); const errs = []; watch(page, errs);
-  await page.goto(BASE); await page.evaluate(() => localStorage.clear()); await page.reload(); await ready(page); await page.waitForTimeout(500); await story(page);
+  await page.goto(BASE); await page.evaluate(() => localStorage.clear()); await page.reload(); await ready(page); await page.waitForTimeout(500);
+  await page.evaluate(() => { window.__pb.GD.skipAll(localStorage); window.__pb.dismissGuide?.(true); });
+  await story(page);
   await setPow(page, { owned: ['spin', 'pounce', 'bark'], tiers: ALL3, pu: ALLPU, look: 4, p: { level: 20 } });
   await page.evaluate(() => { const G = window.__pb; let n = 0; G.__iv = setInterval(() => { G.cds = {}; G.p.powers.eq = ['spin', 'bark'][n++ % 2]; G.usePower(); }, 450); });
   await page.keyboard.down('ArrowRight');

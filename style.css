@@ -62,3 +62,22 @@ body.haspow .b.pw{display:flex}
 .menuDom.sel,.menuDom:hover,.menuDom:focus-visible{color:#ffe066;outline:none}
 #shopNudge{cursor:default;white-space:normal;color:#f6e7c8;font-weight:400;padding:0;pointer-events:none}
 #shopNudge p{margin:0}
+
+/* First-run power guide tip (pauses play; keyboard/gamepad/touch dismiss) */
+.guideTip{display:none;position:fixed;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(360px,calc(100vw - 28px));max-width:92vw;box-sizing:border-box;padding:14px 16px 12px;
+  border-radius:12px;border:3px solid #1a1420;background:#2b2440f2;color:#fff8e8;
+  font:700 14px/1.35 "Trebuchet MS",Verdana,sans-serif;box-shadow:0 6px 0 #0008;pointer-events:auto;touch-action:manipulation}
+.guideTip.on{display:block}
+.guideTip[hidden]{display:none!important}
+.guideTip h2{margin:0 0 8px;font-size:16px;color:#ffe066;text-shadow:1px 1px 0 #1a1420}
+.guideTip p{margin:0 0 12px;font-weight:400;color:#f6e7c8}
+.guideActs{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.guideActs button{pointer-events:auto;touch-action:manipulation;border:2px solid #1a1420;border-radius:10px;
+  padding:8px 12px;font:700 13px/1 "Trebuchet MS",Verdana,sans-serif;cursor:pointer;box-shadow:0 2px 0 #0008}
+#guideOk{background:#f6c94c;color:#1a1420}
+#guideSkip{background:#4a4068;color:#fff8e8}
+@media (max-height:400px){.guideTip{padding:10px 12px 8px;font-size:12px}.guideTip h2{font-size:14px;margin-bottom:6px}.guideActs button{padding:6px 10px;font-size:12px}}
+/* "new upgrade" badge on the menu button (Powers row badge is drawn in the canvas menu label) */
+#menuBtn.guide-badge::after{content:"";position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;
+  background:#f6c94c;border:2px solid #1a1420;box-shadow:0 1px 0 #0006;pointer-events:none}

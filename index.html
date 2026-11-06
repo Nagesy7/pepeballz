@@ -45,6 +45,15 @@
 <div id="shopNudge" class="menuDom" role="note"><p id="shopNudgeText"></p></div>
 <a id="nudgeShop" class="menuDom" target="_blank" rel="noopener" href="https://kibbleinu.com/pay?utm_source=pepeballz&amp;utm_medium=menu#shop-h"></a>
 <button id="nudgeNo" class="menuDom" type="button"></button>
+<!-- First-run power guide (localStorage-flagged, dismissible; text from src/guide.js) -->
+<div id="guideTip" class="guideTip" role="dialog" aria-modal="true" aria-labelledby="guideTitle" hidden>
+  <h2 id="guideTitle"></h2>
+  <p id="guideBody"></p>
+  <div class="guideActs">
+    <button type="button" id="guideOk"></button>
+    <button type="button" id="guideSkip"></button>
+  </div>
+</div>
 <script src="https://kibble-pay.vercel.app/inu-profile.js" data-game="pepeballz" data-position="bottom-right" defer></script>
 <script type="module" src="src/game.js"></script>
 </body>
